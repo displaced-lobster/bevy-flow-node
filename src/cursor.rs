@@ -1,18 +1,13 @@
-use bevy::{
-    prelude::*,
-    render::camera::RenderTarget,
-};
+use bevy::{prelude::*, render::camera::RenderTarget};
 
 pub struct CursorPlugin;
 
 impl Plugin for CursorPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(CursorPosition::default())
+        app.insert_resource(CursorPosition::default())
             .add_system(update_cursor_position);
     }
 }
-
 
 #[derive(Default)]
 pub struct CursorPosition {

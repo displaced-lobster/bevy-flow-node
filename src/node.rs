@@ -1,23 +1,12 @@
-use bevy::{
-    ecs::system::Resource,
-    prelude::*,
-    sprite::MaterialMesh2dBundle,
-    text::Text2dBounds,
-};
-use std::{
-    collections::HashMap,
-    marker::PhantomData,
-};
+use bevy::{ecs::system::Resource, prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
+use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{
-    connection::ConnectionEvent,
-    cursor::CursorPosition,
-};
+use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
 pub trait NodeResolver {
     fn resolve(
         &self,
-        entity:Entity,
+        entity: Entity,
         node: &Node,
         q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput)>,
@@ -35,8 +24,7 @@ impl<N: NodeResolver> Default for NodePlugin<N> {
 
 impl<N: NodeResolver + 'static + Default + Resource> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(NodeConfig::default())
+        app.insert_resource(NodeConfig::default())
             .insert_resource(N::default())
             .add_startup_system(setup)
             .add_system(activate_flow_node)
@@ -62,7 +50,7 @@ impl Node {
     pub fn get_inputs(
         &self,
         resolver: &dyn NodeResolver,
-        entity:Entity,
+        entity: Entity,
         q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
@@ -255,15 +243,14 @@ fn activate_flow_node(
         for (parent, transform) in query.iter() {
             let translation = transform.translation();
 
-            if (translation.x - cursor.x).abs() < config.handle_size_title && (translation.y - cursor.y).abs() < config.handle_size_title {
+            if (translation.x - cursor.x).abs() < config.handle_size_title
+                && (translation.y - cursor.y).abs() < config.handle_size_title
+            {
                 let transform = q_parent.get(parent.get()).unwrap();
                 let translation = transform.translation();
 
                 active_node.entity = Some(parent.get());
-                active_node.offset = Vec2::new(
-                    translation.x - cursor.x,
-                    translation.y - cursor.y,
-                );
+                active_node.offset = Vec2::new(translation.x - cursor.x, translation.y - cursor.y);
                 break;
             }
         }
@@ -353,13 +340,18 @@ fn build_flow_node(
                             .with_children(|parent| {
                                 parent.spawn_bundle(MaterialMesh2dBundle {
                                     material: resources.material_handle_input.clone(),
-                                    mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                                    mesh: bevy::sprite::Mesh2dHandle(
+                                        resources.mesh_handle_io.clone(),
+                                    ),
                                     ..default()
                                 });
                             });
 
                         parent.spawn_bundle(Text2dBundle {
-                            text: Text::from_section(io_template.label.clone(), resources.text_style_body.clone()),
+                            text: Text::from_section(
+                                io_template.label.clone(),
+                                resources.text_style_body.clone(),
+                            ),
                             text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
                                 offset_x + 2.0 * config.handle_size_io + config.padding,
@@ -383,7 +375,9 @@ fn build_flow_node(
                             material: resources.material_handle_output.clone(),
                             mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
                             transform: Transform::from_xyz(
-                                offset_x + node_size.x / 2.0 - 2.0 * config.handle_size_io - config.padding,
+                                offset_x + node_size.x / 2.0
+                                    - 2.0 * config.handle_size_io
+                                    - config.padding,
                                 offset_y - config.handle_size_io - config.padding,
                                 2.0,
                             ),
@@ -392,7 +386,10 @@ fn build_flow_node(
                         .insert(NodeOutput);
 
                     parent.spawn_bundle(Text2dBundle {
-                        text: Text::from_section(io_template.label.clone(), resources.text_style_body.clone()),
+                        text: Text::from_section(
+                            io_template.label.clone(),
+                            resources.text_style_body.clone(),
+                        ),
                         text_2d_bounds: Text2dBounds { size: bounds_io },
                         transform: Transform::from_xyz(
                             offset_x + config.padding,
@@ -447,13 +444,7 @@ fn resolve_output_nodes<N: NodeResolver + Resource>(
 ) {
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
-            resolver.resolve(
-                entity,
-                node,
-                &q_nodes,
-                &q_inputs,
-                &q_outputs
-            );
+            resolver.resolve(entity, node, &q_nodes, &q_inputs, &q_outputs);
         }
     }
 }

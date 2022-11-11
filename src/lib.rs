@@ -8,15 +8,7 @@ pub mod connection;
 pub mod cursor;
 pub mod node;
 
-pub use crate::node::{
-    Node,
-    NodeIO,
-    NodeInput,
-    NodeOutput,
-    NodeResolver,
-    NodeType,
-    OutputNode,
-};
+pub use crate::node::{Node, NodeIO, NodeInput, NodeOutput, NodeResolver, NodeType, OutputNode};
 
 #[derive(Default)]
 pub struct NodePlugins<N: NodeResolver>(PhantomData<N>);

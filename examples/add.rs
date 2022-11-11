@@ -1,15 +1,8 @@
 use bevy::prelude::*;
 
 use bevy_node_editor::{
-    Node,
-    NodeIO,
-    NodeInput,
-    NodeOutput,
-    NodePlugins,
-    NodeResolver,
-    NodeType,
     node::{NodeIOTemplate, NodeTemplate},
-    OutputNode,
+    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeResolver, NodeType, OutputNode,
 };
 
 const ADDITION_NODE: NodeType = NodeType(1);
@@ -61,19 +54,13 @@ struct MathNodeResolver;
 impl NodeResolver for MathNodeResolver {
     fn resolve(
         &self,
-        entity:Entity,
+        entity: Entity,
         node: &Node,
         q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> NodeIO {
-        let inputs = node.get_inputs(
-            self,
-            entity,
-            q_nodes,
-            q_inputs,
-            q_outputs,
-        );
+        let inputs = node.get_inputs(self, entity, q_nodes, q_inputs, q_outputs);
 
         match node.node_type {
             ADDITION_NODE => {
@@ -81,14 +68,12 @@ impl NodeResolver for MathNodeResolver {
                 let b: f32 = inputs["b"].into();
 
                 NodeIO::F32(a + b)
-            },
-            VALUE_NODE => {
-                node.value
-            },
+            }
+            VALUE_NODE => node.value,
             PRINT_NODE => {
                 println!("{:?}", inputs["value"]);
                 NodeIO::None
-            },
+            }
             _ => NodeIO::None,
         }
     }
@@ -130,12 +115,10 @@ impl PrintNode {
         NodeTemplate {
             node_type: PRINT_NODE,
             title: "Print".to_string(),
-            inputs: Some(vec![
-                NodeIOTemplate {
-                    label: "value".to_string(),
-                    ..default()
-                },
-            ]),
+            inputs: Some(vec![NodeIOTemplate {
+                label: "value".to_string(),
+                ..default()
+            }]),
             position: self.position,
             ..default()
         }
@@ -145,9 +128,7 @@ impl PrintNode {
 #[derive(Component)]
 struct Print;
 
-fn setup(
-    mut commands: Commands,
-) {
+fn setup(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 
     commands
@@ -158,12 +139,20 @@ fn setup(
         .spawn()
         .insert(FloatNode::new(7.0, Vec2::new(-150.0, -100.0)).to_template());
 
-    commands
-        .spawn()
-        .insert(AdditionNode { position: Vec2::new(150.0, 0.0) }.to_template());
+    commands.spawn().insert(
+        AdditionNode {
+            position: Vec2::new(150.0, 0.0),
+        }
+        .to_template(),
+    );
 
     commands
         .spawn()
-        .insert(PrintNode { position: Vec2::new(450.0, 0.0) }.to_template())
+        .insert(
+            PrintNode {
+                position: Vec2::new(450.0, 0.0),
+            }
+            .to_template(),
+        )
         .insert(Print);
 }

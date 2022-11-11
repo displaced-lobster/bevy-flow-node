@@ -1,10 +1,7 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::prelude::*;
-use bevy_prototype_lyon::{
-    entity::ShapeBundle,
-    prelude::*,
-};
+use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 
 use crate::{
     cursor::CursorPosition,
@@ -15,8 +12,7 @@ pub struct ConnectionPlugin;
 
 impl Plugin for ConnectionPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(ConnectionConfig::default())
+        app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
             .add_system(draw_connections)
@@ -45,7 +41,6 @@ pub enum ConnectionEvent {
     Created,
 }
 
-
 #[derive(Component)]
 struct PartialConnection {
     input: Option<Entity>,
@@ -68,19 +63,23 @@ fn complete_partial_connection(
             }
 
             if connection.input.is_some() {
-                for(entity, transform) in q_output.iter() {
+                for (entity, transform) in q_output.iter() {
                     let translation = transform.translation();
 
-                    if (translation.x - cursor.x).abs() < config.threshold_radius && (translation.y - cursor.y).abs() < config.threshold_radius {
+                    if (translation.x - cursor.x).abs() < config.threshold_radius
+                        && (translation.y - cursor.y).abs() < config.threshold_radius
+                    {
                         connection.output = Some(entity);
                         break;
                     }
                 }
             } else if connection.output.is_some() {
-                for(entity, transform) in q_input.iter() {
+                for (entity, transform) in q_input.iter() {
                     let translation = transform.translation();
 
-                    if (translation.x - cursor.x).abs() < config.threshold_radius && (translation.y - cursor.y).abs() < config.threshold_radius {
+                    if (translation.x - cursor.x).abs() < config.threshold_radius
+                        && (translation.y - cursor.y).abs() < config.threshold_radius
+                    {
                         connection.input = Some(entity);
                         break;
                     }
@@ -105,13 +104,14 @@ fn convert_partial_connection(
                 if let Ok((input_entity, mut input, transform)) = q_input.get_mut(input) {
                     input.connection = Some(output);
 
-                    commands
-                        .entity(input_entity)
-                        .insert_bundle(ShapeBundle{
-                            mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                            transform: *transform,
-                            ..default()
-                        });
+                    commands.entity(input_entity).insert_bundle(ShapeBundle {
+                        mode: DrawMode::Stroke(StrokeMode::new(
+                            Color::WHITE,
+                            config.connection_size,
+                        )),
+                        transform: *transform,
+                        ..default()
+                    });
 
                     ev_connection.send(ConnectionEvent::Created);
                     commands.entity(entity).despawn_recursive();
@@ -130,7 +130,7 @@ fn create_partial_connection(
     q_input: Query<(Entity, &GlobalTransform), With<NodeInput>>,
     q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
-    if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left)  {
+    if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left) {
         return;
     }
 
@@ -138,14 +138,15 @@ fn create_partial_connection(
         let translation = transform.translation();
 
         if (translation.x - cursor.x).abs() < config.threshold_radius
-            && (translation.y - cursor.y).abs() < config.threshold_radius {
+            && (translation.y - cursor.y).abs() < config.threshold_radius
+        {
             commands
                 .spawn()
                 .insert(PartialConnection {
                     input: Some(entity),
                     output: None,
                 })
-                .insert_bundle(ShapeBundle{
+                .insert_bundle(ShapeBundle {
                     mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
                     ..default()
                 });
@@ -158,14 +159,15 @@ fn create_partial_connection(
         let translation = trasnform.translation();
 
         if (translation.x - cursor.x).abs() < config.threshold_radius
-            && (translation.y - cursor.y).abs() < config.threshold_radius {
+            && (translation.y - cursor.y).abs() < config.threshold_radius
+        {
             commands
                 .spawn()
                 .insert(PartialConnection {
                     input: None,
                     output: Some(entity),
                 })
-                .insert_bundle(ShapeBundle{
+                .insert_bundle(ShapeBundle {
                     mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
                     ..default()
                 });
@@ -174,7 +176,6 @@ fn create_partial_connection(
         }
     }
 }
-
 
 fn draw_connections(
     mut q_input: Query<(&NodeInput, &GlobalTransform, &mut Path)>,
@@ -215,7 +216,10 @@ fn draw_partial_connections(
             if let Ok(transform) = q_start.get(connection_entity) {
                 let mut path_builder = PathBuilder::new();
 
-                path_builder.move_to(Vec2::new(transform.translation().x, transform.translation().y));
+                path_builder.move_to(Vec2::new(
+                    transform.translation().x,
+                    transform.translation().y,
+                ));
                 path_builder.line_to(cursor.position());
 
                 let line = path_builder.build();
