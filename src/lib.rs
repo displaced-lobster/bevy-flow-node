@@ -5,7 +5,7 @@ pub mod connection;
 pub mod cursor;
 pub mod node;
 
-pub use crate::node::{Node, NodeIO, NodeInput, NodeOutput, NodeType, OutputNode};
+pub use crate::node::{Node, NodeInput, NodeOutput, NodeType, OutputNode};
 
 #[derive(Default)]
 pub struct NodePlugins<T: NodeType>(PhantomData<T>);

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
+    Node, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
 };
 
 fn main() {
@@ -18,6 +18,8 @@ fn main() {
 struct NoOpNodes;
 
 impl NodeType for NoOpNodes {
+    type NodeIO = ();
+
     fn resolve(
         &self,
         _entity: Entity,
@@ -25,8 +27,8 @@ impl NodeType for NoOpNodes {
         _q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
         _q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         _q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> NodeIO {
-        NodeIO::default()
+    ) -> Self::NodeIO {
+        ()
     }
 }
 

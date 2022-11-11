@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
+    Node, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
 };
 
 fn main() {
@@ -28,6 +28,8 @@ impl Default for MathNodes {
 }
 
 impl NodeType for MathNodes {
+    type NodeIO = f32;
+
     fn resolve(
         &self,
         entity: Entity,
@@ -35,20 +37,22 @@ impl NodeType for MathNodes {
         q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> NodeIO {
+    ) -> Self::NodeIO {
         let inputs = node.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
         match node.node_type {
             MathNodes::Add => {
-                let a: f32 = inputs["a"].into();
-                let b: f32 = inputs["b"].into();
+                let a: f32 = inputs["a"];
+                let b: f32 = inputs["b"];
 
-                NodeIO::F32(a + b)
+                a + b
             }
-            MathNodes::Value(value) => NodeIO::F32(value),
+            MathNodes::Value(value) => value,
             MathNodes::Print => {
-                println!("{:?}", inputs["value"]);
-                NodeIO::None
+                let value = inputs["value"];
+
+                println!("{:?}", value);
+                value
             }
         }
     }

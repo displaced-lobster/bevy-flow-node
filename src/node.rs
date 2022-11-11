@@ -4,6 +4,8 @@ use std::{collections::HashMap, marker::PhantomData};
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
 pub trait NodeType: 'static + Clone + Copy + Default + Sized + Send + Sync {
+    type NodeIO: Clone + Copy + Default + Send + Sync;
+
     fn resolve(
         &self,
         entity: Entity,
@@ -11,7 +13,7 @@ pub trait NodeType: 'static + Clone + Copy + Default + Sized + Send + Sync {
         q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> NodeIO;
+    ) -> Self::NodeIO;
 }
 
 pub struct NodePlugin<T: NodeType>(PhantomData<T>);
@@ -51,7 +53,7 @@ impl<T: NodeType> Node<T> {
         q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> HashMap<String, NodeIO> {
+    ) -> HashMap<String, T::NodeIO> {
         let mut inputs = HashMap::new();
 
         for (parent, input) in q_inputs.iter() {
@@ -72,7 +74,7 @@ impl<T: NodeType> Node<T> {
         q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> NodeIO {
+    ) -> T::NodeIO {
         self.node_type
             .resolve(entity, self, q_nodes, q_inputs, q_outputs)
     }
@@ -101,31 +103,10 @@ impl Default for NodeConfig {
 #[derive(Component)]
 struct NodeHandle;
 
-#[derive(Clone, Copy, Debug)]
-pub enum NodeIO {
-    None,
-    F32(f32),
-}
-
-impl Default for NodeIO {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-impl From<NodeIO> for f32 {
-    fn from(io: NodeIO) -> Self {
-        match io {
-            NodeIO::F32(f) => f,
-            _ => 0.0,
-        }
-    }
-}
-
 #[derive(Component, Default)]
 pub struct NodeInput<T: NodeType> {
     pub connection: Option<Entity>,
-    pub default: NodeIO,
+    pub default: T::NodeIO,
     pub label: String,
     _phantom: PhantomData<T>,
 }
@@ -136,7 +117,7 @@ impl<T: NodeType> NodeInput<T> {
         q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> NodeIO {
+    ) -> T::NodeIO {
         if let Some(connection) = self.connection {
             if let Ok((parent, _output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
