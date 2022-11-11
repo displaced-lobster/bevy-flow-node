@@ -2,157 +2,121 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeResolver, NodeType, OutputNode,
+    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
 };
-
-const ADDITION_NODE: NodeType = NodeType(1);
-const VALUE_NODE: NodeType = NodeType(2);
-const PRINT_NODE: NodeType = NodeType(3);
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
-        .add_plugins(NodePlugins::<MathNodeResolver>::default())
+        .add_plugins(NodePlugins::<MathNodes>::default())
         .add_startup_system(setup)
         .run();
 }
 
-#[derive(Default)]
-struct AdditionNode {
-    position: Vec2,
+#[derive(Clone, Copy)]
+enum MathNodes {
+    Add,
+    Print,
+    Value(f32),
 }
 
-impl AdditionNode {
-    fn to_template(&self) -> NodeTemplate {
-        NodeTemplate {
-            node_type: ADDITION_NODE,
-            position: self.position,
-            title: "Add".to_string(),
-            inputs: Some(vec![
-                NodeIOTemplate {
-                    label: "a".to_string(),
-                    ..default()
-                },
-                NodeIOTemplate {
-                    label: "b".to_string(),
-                    ..default()
-                },
-            ]),
-            output: Some(NodeIOTemplate {
-                label: "result".to_string(),
-                ..default()
-            }),
-            ..default()
-        }
+impl Default for MathNodes {
+    fn default() -> Self {
+        Self::Value(0.0)
     }
 }
 
-#[derive(Default)]
-struct MathNodeResolver;
-
-impl NodeResolver for MathNodeResolver {
+impl NodeType for MathNodes {
     fn resolve(
         &self,
         entity: Entity,
-        node: &Node,
-        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput)>,
+        node: &Node<Self>,
+        q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> NodeIO {
-        let inputs = node.get_inputs(self, entity, q_nodes, q_inputs, q_outputs);
+        let inputs = node.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
         match node.node_type {
-            ADDITION_NODE => {
+            MathNodes::Add => {
                 let a: f32 = inputs["a"].into();
                 let b: f32 = inputs["b"].into();
 
                 NodeIO::F32(a + b)
             }
-            VALUE_NODE => node.value,
-            PRINT_NODE => {
+            MathNodes::Value(value) => NodeIO::F32(value),
+            MathNodes::Print => {
                 println!("{:?}", inputs["value"]);
                 NodeIO::None
             }
-            _ => NodeIO::None,
         }
     }
 }
 
-#[derive(Default)]
-struct FloatNode {
-    value: f32,
-    position: Vec2,
-}
-
-impl FloatNode {
-    fn new(value: f32, position: Vec2) -> Self {
-        Self { value, position }
-    }
-
-    fn to_template(&self) -> NodeTemplate {
-        NodeTemplate {
-            node_type: VALUE_NODE,
-            title: "Value".to_string(),
-            output: Some(NodeIOTemplate {
-                label: format!("{}", self.value),
+impl MathNodes {
+    fn to_template(&self, position: Vec2) -> NodeTemplate<Self> {
+        match self {
+            Self::Add => NodeTemplate {
+                position,
+                title: "Add".to_string(),
+                inputs: Some(vec![
+                    NodeIOTemplate {
+                        label: "a".to_string(),
+                        ..default()
+                    },
+                    NodeIOTemplate {
+                        label: "b".to_string(),
+                        ..default()
+                    },
+                ]),
+                output: Some(NodeIOTemplate {
+                    label: "result".to_string(),
+                    ..default()
+                }),
+                node_type: *self,
                 ..default()
-            }),
-            position: self.position,
-            value: NodeIO::F32(self.value),
-            ..default()
-        }
-    }
-}
-
-#[derive(Default)]
-struct PrintNode {
-    position: Vec2,
-}
-
-impl PrintNode {
-    fn to_template(&self) -> NodeTemplate {
-        NodeTemplate {
-            node_type: PRINT_NODE,
-            title: "Print".to_string(),
-            inputs: Some(vec![NodeIOTemplate {
-                label: "value".to_string(),
+            },
+            Self::Print => NodeTemplate {
+                position,
+                title: "Print".to_string(),
+                inputs: Some(vec![NodeIOTemplate {
+                    label: "value".to_string(),
+                    ..Default::default()
+                }]),
+                node_type: *self,
                 ..default()
-            }]),
-            position: self.position,
-            ..default()
+            },
+            Self::Value(_) => NodeTemplate {
+                position,
+                title: "Value".to_string(),
+                output: Some(NodeIOTemplate {
+                    label: "Value".to_string(),
+                    ..Default::default()
+                }),
+                node_type: *self,
+                ..Default::default()
+            },
         }
     }
 }
-
-#[derive(Component)]
-struct Print;
 
 fn setup(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 
     commands
         .spawn()
-        .insert(FloatNode::new(5.0, Vec2::new(-150.0, 100.0)).to_template());
+        .insert(MathNodes::Value(5.0).to_template(Vec2::new(-150.0, 100.0)));
 
     commands
         .spawn()
-        .insert(FloatNode::new(7.0, Vec2::new(-150.0, -100.0)).to_template());
-
-    commands.spawn().insert(
-        AdditionNode {
-            position: Vec2::new(150.0, 0.0),
-        }
-        .to_template(),
-    );
+        .insert(MathNodes::Value(7.0).to_template(Vec2::new(-150.0, -100.0)));
 
     commands
         .spawn()
-        .insert(
-            PrintNode {
-                position: Vec2::new(450.0, 0.0),
-            }
-            .to_template(),
-        )
-        .insert(Print);
+        .insert(MathNodes::Add.to_template(Vec2::new(150.0, 0.0)));
+
+    commands
+        .spawn()
+        .insert(MathNodes::Print.to_template(Vec2::new(450.0, 0.0)));
 }

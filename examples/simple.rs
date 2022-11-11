@@ -2,28 +2,28 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeResolver, OutputNode,
+    Node, NodeIO, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
 };
 
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
-        .add_plugins(NodePlugins::<NoOpNodeResolver>::default())
+        .add_plugins(NodePlugins::<NoOpNodes>::default())
         .add_startup_system(setup)
         .run();
 }
 
-#[derive(Default)]
-struct NoOpNodeResolver;
+#[derive(Clone, Copy, Default)]
+struct NoOpNodes;
 
-impl NodeResolver for NoOpNodeResolver {
+impl NodeType for NoOpNodes {
     fn resolve(
         &self,
         _entity: Entity,
-        _node: &Node,
-        _q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
-        _q_inputs: &Query<(&Parent, &NodeInput)>,
+        _node: &Node<Self>,
+        _q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
+        _q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         _q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> NodeIO {
         NodeIO::default()
@@ -33,7 +33,7 @@ impl NodeResolver for NoOpNodeResolver {
 fn setup(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 
-    commands.spawn().insert(NodeTemplate {
+    commands.spawn().insert(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(-200.0, 0.0),
         title: "Node 1".to_string(),
         output: Some(NodeIOTemplate {
@@ -43,7 +43,7 @@ fn setup(mut commands: Commands) {
         ..default()
     });
 
-    commands.spawn().insert(NodeTemplate {
+    commands.spawn().insert(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(200.0, 0.0),
         title: "Node 2".to_string(),
         inputs: Some(vec![NodeIOTemplate {

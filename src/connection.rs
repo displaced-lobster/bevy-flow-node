@@ -2,24 +2,26 @@
 
 use bevy::prelude::*;
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
+use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
-    node::{NodeInput, NodeOutput},
+    node::{NodeInput, NodeOutput, NodeType},
 };
 
-pub struct ConnectionPlugin;
+#[derive(Default)]
+pub struct ConnectionPlugin<T: NodeType>(PhantomData<T>);
 
-impl Plugin for ConnectionPlugin {
+impl<T: NodeType> Plugin for ConnectionPlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
-            .add_system(draw_connections)
-            .add_system(draw_partial_connections)
-            .add_system(complete_partial_connection)
-            .add_system(convert_partial_connection)
-            .add_system(create_partial_connection);
+            .add_system(draw_connections::<T>)
+            .add_system(draw_partial_connections::<T>)
+            .add_system(complete_partial_connection::<T>)
+            .add_system(convert_partial_connection::<T>)
+            .add_system(create_partial_connection::<T>);
     }
 }
 
@@ -47,13 +49,13 @@ struct PartialConnection {
     output: Option<Entity>,
 }
 
-fn complete_partial_connection(
+fn complete_partial_connection<T: NodeType>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut q_connections: Query<(Entity, &mut PartialConnection)>,
-    q_input: Query<(Entity, &GlobalTransform), With<NodeInput>>,
+    q_input: Query<(Entity, &GlobalTransform), With<NodeInput<T>>>,
     q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
     if mouse_button_input.just_released(MouseButton::Left) {
@@ -91,12 +93,12 @@ fn complete_partial_connection(
     }
 }
 
-fn convert_partial_connection(
+fn convert_partial_connection<T: NodeType>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
-    mut q_input: Query<(Entity, &mut NodeInput, &Transform)>,
+    mut q_input: Query<(Entity, &mut NodeInput<T>, &Transform)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {
@@ -121,13 +123,13 @@ fn convert_partial_connection(
     }
 }
 
-fn create_partial_connection(
+fn create_partial_connection<T: NodeType>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<(Entity, &GlobalTransform), With<NodeInput>>,
+    q_input: Query<(Entity, &GlobalTransform), With<NodeInput<T>>>,
     q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
     if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left) {
@@ -177,8 +179,8 @@ fn create_partial_connection(
     }
 }
 
-fn draw_connections(
-    mut q_input: Query<(&NodeInput, &GlobalTransform, &mut Path)>,
+fn draw_connections<T: NodeType>(
+    mut q_input: Query<(&NodeInput<T>, &GlobalTransform, &mut Path)>,
     q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
     for (input, input_transform, mut path) in q_input.iter_mut() {
@@ -199,11 +201,11 @@ fn draw_connections(
     }
 }
 
-fn draw_partial_connections(
+fn draw_partial_connections<T: NodeType>(
     mut commands: Commands,
     cursor: Res<CursorPosition>,
     mut q_connections: Query<(Entity, &PartialConnection, &mut Path)>,
-    q_start: Query<&GlobalTransform, Or<(With<NodeInput>, With<NodeOutput>)>>,
+    q_start: Query<&GlobalTransform, Or<(With<NodeInput<T>>, With<NodeOutput>)>>,
 ) {
     for (entity, connection, mut path) in q_connections.iter_mut() {
         let connection_entity = if connection.input.is_some() {

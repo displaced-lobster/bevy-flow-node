@@ -1,36 +1,35 @@
-use bevy::{ecs::system::Resource, prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
-pub trait NodeResolver {
+pub trait NodeType: 'static + Clone + Copy + Default + Sized + Send + Sync {
     fn resolve(
         &self,
         entity: Entity,
-        node: &Node,
-        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput)>,
+        node: &Node<Self>,
+        q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> NodeIO;
 }
 
-pub struct NodePlugin<N: NodeResolver>(PhantomData<N>);
+pub struct NodePlugin<T: NodeType>(PhantomData<T>);
 
-impl<N: NodeResolver> Default for NodePlugin<N> {
+impl<T: NodeType> Default for NodePlugin<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<N: NodeResolver + 'static + Default + Resource> Plugin for NodePlugin<N> {
+impl<T: NodeType> Plugin for NodePlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
-            .insert_resource(N::default())
             .add_startup_system(setup)
             .add_system(activate_flow_node)
-            .add_system(build_flow_node)
-            .add_system(drag_flow_node)
-            .add_system(resolve_output_nodes::<N>);
+            .add_system(build_flow_node::<T>)
+            .add_system(drag_flow_node::<T>)
+            .add_system(resolve_output_nodes::<T>);
     }
 }
 
@@ -41,18 +40,16 @@ struct ActiveNode {
 }
 
 #[derive(Component, Default)]
-pub struct Node {
-    pub node_type: NodeType,
-    pub value: NodeIO,
+pub struct Node<T: NodeType> {
+    pub node_type: T,
 }
 
-impl Node {
+impl<T: NodeType> Node<T> {
     pub fn get_inputs(
         &self,
-        resolver: &dyn NodeResolver,
         entity: Entity,
-        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput)>,
+        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> HashMap<String, NodeIO> {
         let mut inputs = HashMap::new();
@@ -61,12 +58,23 @@ impl Node {
             if parent.get() == entity {
                 inputs.insert(
                     input.label.clone(),
-                    input.get_input(resolver, q_nodes, q_inputs, q_outputs),
+                    input.get_input(q_nodes, q_inputs, q_outputs),
                 );
             }
         }
 
         inputs
+    }
+
+    pub fn resolve(
+        &self,
+        entity: Entity,
+        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
+        q_outputs: &Query<(&Parent, &NodeOutput)>,
+    ) -> NodeIO {
+        self.node_type
+            .resolve(entity, self, q_nodes, q_inputs, q_outputs)
     }
 }
 
@@ -115,24 +123,24 @@ impl From<NodeIO> for f32 {
 }
 
 #[derive(Component, Default)]
-pub struct NodeInput {
+pub struct NodeInput<T: NodeType> {
     pub connection: Option<Entity>,
     pub default: NodeIO,
     pub label: String,
+    _phantom: PhantomData<T>,
 }
 
-impl NodeInput {
+impl<T: NodeType> NodeInput<T> {
     pub fn get_input(
         &self,
-        resolver: &dyn NodeResolver,
-        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput)>,
+        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> NodeIO {
         if let Some(connection) = self.connection {
             if let Ok((parent, _output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
-                    return resolver.resolve(entity, node, q_nodes, q_inputs, q_outputs);
+                    return node.resolve(entity, q_nodes, q_inputs, q_outputs);
                 }
             }
         }
@@ -167,34 +175,29 @@ impl Default for NodeIOTemplate {
 }
 
 #[derive(Component)]
-pub struct NodeTemplate {
+pub struct NodeTemplate<T: NodeType> {
     pub activate: bool,
-    pub node_type: NodeType,
+    pub node_type: T,
     pub position: Vec2,
     pub title: String,
     pub width: f32,
     pub inputs: Option<Vec<NodeIOTemplate>>,
     pub output: Option<NodeIOTemplate>,
-    pub value: NodeIO,
 }
 
-impl Default for NodeTemplate {
+impl<T: NodeType> Default for NodeTemplate<T> {
     fn default() -> Self {
         Self {
             activate: false,
-            node_type: NodeType(0),
+            node_type: T::default(),
             position: Vec2::ZERO,
             title: "Flow Node".to_string(),
             width: 200.0,
             inputs: None,
             output: None,
-            value: NodeIO::None,
         }
     }
 }
-
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
-pub struct NodeType(pub usize);
 
 #[derive(Component)]
 pub struct OutputNode;
@@ -262,12 +265,12 @@ fn activate_flow_node(
     }
 }
 
-fn build_flow_node(
+fn build_flow_node<T: NodeType>(
     mut commands: Commands,
     config: Res<NodeConfig>,
     resources: Res<NodeResources>,
     mut active_node: ResMut<ActiveNode>,
-    query: Query<(Entity, &NodeTemplate)>,
+    query: Query<(Entity, &NodeTemplate<T>)>,
 ) {
     for (entity, template) in query.iter() {
         let n_io = 2;
@@ -333,7 +336,7 @@ fn build_flow_node(
                                 ),
                                 ..default()
                             })
-                            .insert(NodeInput {
+                            .insert(NodeInput::<T> {
                                 label: io_template.label.clone(),
                                 ..default()
                             })
@@ -406,9 +409,8 @@ fn build_flow_node(
             })
             .insert(Node {
                 node_type: template.node_type,
-                value: template.value,
             })
-            .remove::<NodeTemplate>();
+            .remove::<NodeTemplate<T>>();
 
         if output {
             commands.entity(entity).insert(OutputNode);
@@ -421,10 +423,10 @@ fn build_flow_node(
     }
 }
 
-fn drag_flow_node(
+fn drag_flow_node<T: NodeType>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
-    mut query: Query<&mut Transform, With<Node>>,
+    mut query: Query<&mut Transform, With<Node<T>>>,
 ) {
     if let Some(entity) = active_node.entity {
         if let Ok(mut transform) = query.get_mut(entity) {
@@ -434,17 +436,16 @@ fn drag_flow_node(
     }
 }
 
-fn resolve_output_nodes<N: NodeResolver + Resource>(
-    resolver: Res<N>,
+fn resolve_output_nodes<T: NodeType>(
     mut ev_connection: EventReader<ConnectionEvent>,
-    q_output: Query<(Entity, &Node), With<OutputNode>>,
-    q_nodes: Query<(Entity, &Node), Without<OutputNode>>,
-    q_inputs: Query<(&Parent, &NodeInput)>,
+    q_output: Query<(Entity, &Node<T>), With<OutputNode>>,
+    q_nodes: Query<(Entity, &Node<T>), Without<OutputNode>>,
+    q_inputs: Query<(&Parent, &NodeInput<T>)>,
     q_outputs: Query<(&Parent, &NodeOutput)>,
 ) {
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
-            resolver.resolve(entity, node, &q_nodes, &q_inputs, &q_outputs);
+            node.resolve(entity, &q_nodes, &q_inputs, &q_outputs);
         }
     }
 }

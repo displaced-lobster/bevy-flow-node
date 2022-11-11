@@ -1,23 +1,20 @@
-use bevy::{
-    app::{PluginGroup, PluginGroupBuilder},
-    ecs::system::Resource,
-};
+use bevy::app::{PluginGroup, PluginGroupBuilder};
 use std::marker::PhantomData;
 
 pub mod connection;
 pub mod cursor;
 pub mod node;
 
-pub use crate::node::{Node, NodeIO, NodeInput, NodeOutput, NodeResolver, NodeType, OutputNode};
+pub use crate::node::{Node, NodeIO, NodeInput, NodeOutput, NodeType, OutputNode};
 
 #[derive(Default)]
-pub struct NodePlugins<N: NodeResolver>(PhantomData<N>);
+pub struct NodePlugins<T: NodeType>(PhantomData<T>);
 
-impl<N: NodeResolver + 'static + Default + Resource> PluginGroup for NodePlugins<N> {
+impl<T: NodeType> PluginGroup for NodePlugins<T> {
     fn build(&mut self, group: &mut PluginGroupBuilder) {
         group
-            .add(connection::ConnectionPlugin)
+            .add(connection::ConnectionPlugin::<T>::default())
             .add(cursor::CursorPlugin)
-            .add(node::NodePlugin::<N>::default());
+            .add(node::NodePlugin::<T>::default());
     }
 }
