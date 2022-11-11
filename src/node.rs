@@ -1,34 +1,88 @@
 use bevy::{
+    ecs::system::Resource,
     prelude::*,
     sprite::MaterialMesh2dBundle,
     text::Text2dBounds,
 };
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+};
 
-use crate::cursor::CursorPosition;
+use crate::{
+    connection::ConnectionEvent,
+    cursor::CursorPosition,
+};
 
-pub struct FlowNodePlugin;
+pub trait NodeResolver {
+    fn resolve(
+        &self,
+        entity:Entity,
+        node: &Node,
+        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput)>,
+        q_outputs: &Query<(&Parent, &NodeOutput)>,
+    ) -> NodeIO;
+}
 
-impl Plugin for FlowNodePlugin {
+pub struct NodePlugin<N: NodeResolver>(PhantomData<N>);
+
+impl<N: NodeResolver> Default for NodePlugin<N> {
+    fn default() -> Self {
+        Self(PhantomData)
+    }
+}
+
+impl<N: NodeResolver + 'static + Default + Resource> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
         app
-            .insert_resource(FlowNodeConfig::default())
+            .insert_resource(NodeConfig::default())
+            .insert_resource(N::default())
             .add_startup_system(setup)
             .add_system(activate_flow_node)
             .add_system(build_flow_node)
-            .add_system(drag_flow_node);
+            .add_system(drag_flow_node)
+            .add_system(resolve_output_nodes::<N>);
     }
 }
 
 #[derive(Default)]
-struct ActiveFlowNode {
+struct ActiveNode {
     entity: Option<Entity>,
     offset: Vec2,
 }
 
-#[derive(Component)]
-struct FlowNode;
+#[derive(Component, Default)]
+pub struct Node {
+    pub node_type: NodeType,
+    pub value: NodeIO,
+}
 
-pub struct FlowNodeConfig {
+impl Node {
+    pub fn get_inputs(
+        &self,
+        resolver: &dyn NodeResolver,
+        entity:Entity,
+        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput)>,
+        q_outputs: &Query<(&Parent, &NodeOutput)>,
+    ) -> HashMap<String, NodeIO> {
+        let mut inputs = HashMap::new();
+
+        for (parent, input) in q_inputs.iter() {
+            if parent.get() == entity {
+                inputs.insert(
+                    input.label.clone(),
+                    input.get_input(resolver, q_nodes, q_inputs, q_outputs),
+                );
+            }
+        }
+
+        inputs
+    }
+}
+
+pub struct NodeConfig {
     pub handle_size_io: f32,
     pub handle_size_title: f32,
     pub padding: f32,
@@ -36,7 +90,7 @@ pub struct FlowNodeConfig {
     pub font_size_title: f32,
 }
 
-impl Default for FlowNodeConfig {
+impl Default for NodeConfig {
     fn default() -> Self {
         Self {
             handle_size_io: 6.0,
@@ -49,17 +103,60 @@ impl Default for FlowNodeConfig {
 }
 
 #[derive(Component)]
-struct FlowNodeHandle;
+struct NodeHandle;
+
+#[derive(Clone, Copy, Debug)]
+pub enum NodeIO {
+    None,
+    F32(f32),
+}
+
+impl Default for NodeIO {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl From<NodeIO> for f32 {
+    fn from(io: NodeIO) -> Self {
+        match io {
+            NodeIO::F32(f) => f,
+            _ => 0.0,
+        }
+    }
+}
 
 #[derive(Component, Default)]
-pub struct FlowNodeInput {
+pub struct NodeInput {
     pub connection: Option<Entity>,
+    pub default: NodeIO,
+    pub label: String,
+}
+
+impl NodeInput {
+    pub fn get_input(
+        &self,
+        resolver: &dyn NodeResolver,
+        q_nodes: &Query<(Entity, &Node), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput)>,
+        q_outputs: &Query<(&Parent, &NodeOutput)>,
+    ) -> NodeIO {
+        if let Some(connection) = self.connection {
+            if let Ok((parent, _output)) = q_outputs.get(connection) {
+                if let Ok((entity, node)) = q_nodes.get(parent.get()) {
+                    return resolver.resolve(entity, node, q_nodes, q_inputs, q_outputs);
+                }
+            }
+        }
+
+        self.default
+    }
 }
 
 #[derive(Component)]
-pub struct FlowNodeOutput;
+pub struct NodeOutput;
 
-struct FlowNodeResources {
+struct NodeResources {
     material_handle_input: Handle<ColorMaterial>,
     material_handle_output: Handle<ColorMaterial>,
     material_handle_title: Handle<ColorMaterial>,
@@ -69,37 +166,59 @@ struct FlowNodeResources {
     text_style_title: TextStyle,
 }
 
-#[derive(Component)]
-pub struct FlowNodeTemplate {
-    pub activate: bool,
-    pub position: Vec2,
-    pub title: String,
-    pub width: f32,
-    pub n_inputs: usize,
-    pub n_outputs: usize,
+pub struct NodeIOTemplate {
+    pub label: String,
 }
 
-impl Default for FlowNodeTemplate {
+impl Default for NodeIOTemplate {
     fn default() -> Self {
         Self {
-            activate: false,
-            position: Vec2::ZERO,
-            title: "Flow Node".to_string(),
-            width: 200.0,
-            n_inputs: 0,
-            n_outputs: 0,
+            label: "I/O".to_string(),
         }
     }
 }
 
+#[derive(Component)]
+pub struct NodeTemplate {
+    pub activate: bool,
+    pub node_type: NodeType,
+    pub position: Vec2,
+    pub title: String,
+    pub width: f32,
+    pub inputs: Option<Vec<NodeIOTemplate>>,
+    pub output: Option<NodeIOTemplate>,
+    pub value: NodeIO,
+}
+
+impl Default for NodeTemplate {
+    fn default() -> Self {
+        Self {
+            activate: false,
+            node_type: NodeType(0),
+            position: Vec2::ZERO,
+            title: "Flow Node".to_string(),
+            width: 200.0,
+            inputs: None,
+            output: None,
+            value: NodeIO::None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+pub struct NodeType(pub usize);
+
+#[derive(Component)]
+pub struct OutputNode;
+
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    config: Res<FlowNodeConfig>,
+    config: Res<NodeConfig>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    commands.insert_resource(ActiveFlowNode::default());
+    commands.insert_resource(ActiveNode::default());
 
     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     let text_style_body = TextStyle {
@@ -113,7 +232,7 @@ fn setup(
         color: Color::WHITE,
     };
 
-    commands.insert_resource(FlowNodeResources {
+    commands.insert_resource(NodeResources {
         material_handle_input: materials.add(Color::YELLOW.into()),
         material_handle_output: materials.add(Color::RED.into()),
         material_handle_title: materials.add(Color::PURPLE.into()),
@@ -125,11 +244,11 @@ fn setup(
 }
 
 fn activate_flow_node(
-    mut active_node: ResMut<ActiveFlowNode>,
-    config: Res<FlowNodeConfig>,
+    mut active_node: ResMut<ActiveNode>,
+    config: Res<NodeConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
-    query: Query<(&Parent, &GlobalTransform), With<FlowNodeHandle>>,
+    query: Query<(&Parent, &GlobalTransform), With<NodeHandle>>,
     q_parent: Query<&GlobalTransform>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
@@ -158,12 +277,12 @@ fn activate_flow_node(
 
 fn build_flow_node(
     mut commands: Commands,
-    config: Res<FlowNodeConfig>,
-    resources: Res<FlowNodeResources>,
-    mut active_node: ResMut<ActiveFlowNode>,
-    query: Query<(Entity, &FlowNodeTemplate)>,
+    config: Res<NodeConfig>,
+    resources: Res<NodeResources>,
+    mut active_node: ResMut<ActiveNode>,
+    query: Query<(Entity, &NodeTemplate)>,
 ) {
-    for (template_entity, template) in query.iter() {
+    for (entity, template) in query.iter() {
         let n_io = 2;
         let height_body = (config.font_size_body + config.padding) * n_io as f32;
         let height_title = config.font_size_title + config.padding * 2.0;
@@ -174,9 +293,11 @@ fn build_flow_node(
         let bounds_io = Vec2::new(width_interior / 2.0, config.font_size_body);
         let offset_x = -node_size.x / 2.0 + config.padding;
         let mut offset_y = node_size.y / 2.0 - config.padding;
+        let mut output = false;
 
-        let entity = commands
-            .spawn_bundle(SpriteBundle {
+        commands
+            .entity(entity)
+            .insert_bundle(SpriteBundle {
                 sprite: Sprite {
                     color: Color::rgb(0.3, 0.3, 0.3),
                     custom_size: Some(Vec2::new(node_size.x, node_size.y)),
@@ -197,7 +318,7 @@ fn build_flow_node(
                         ),
                         ..default()
                     })
-                    .insert(FlowNodeHandle);
+                    .insert(NodeHandle);
 
                 parent.spawn_bundle(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
@@ -214,44 +335,49 @@ fn build_flow_node(
 
                 let offset_y_body = offset_y;
 
-                for _ in 0..template.n_inputs {
-                    parent
-                        .spawn_bundle(MaterialMesh2dBundle {
-                            material: resources.material_handle_input.clone(),
-                            mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                if let Some(inputs) = &template.inputs {
+                    for io_template in inputs.iter() {
+                        parent
+                            .spawn_bundle(SpatialBundle {
+                                transform: Transform::from_xyz(
+                                    offset_x + config.handle_size_io,
+                                    offset_y - config.handle_size_io - config.padding,
+                                    1.0,
+                                ),
+                                ..default()
+                            })
+                            .insert(NodeInput {
+                                label: io_template.label.clone(),
+                                ..default()
+                            })
+                            .with_children(|parent| {
+                                parent.spawn_bundle(MaterialMesh2dBundle {
+                                    material: resources.material_handle_input.clone(),
+                                    mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                                    ..default()
+                                });
+                            });
+
+                        parent.spawn_bundle(Text2dBundle {
+                            text: Text::from_section(io_template.label.clone(), resources.text_style_body.clone()),
+                            text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
-                                offset_x + config.handle_size_io,
-                                offset_y - config.handle_size_io - config.padding,
+                                offset_x + 2.0 * config.handle_size_io + config.padding,
+                                offset_y - config.font_size_body + config.handle_size_io * 2.0,
                                 1.0,
                             ),
                             ..default()
-                        })
-                        .with_children(|parent| {
-                            parent
-                                .spawn_bundle(TransformBundle::default())
-                                .insert(FlowNodeInput::default());
                         });
 
-
-                    parent.spawn_bundle(Text2dBundle {
-                        text: Text::from_section("Input", resources.text_style_body.clone()),
-                        text_2d_bounds: Text2dBounds { size: bounds_io },
-                        transform: Transform::from_xyz(
-                            offset_x + 2.0 * config.handle_size_io + config.padding,
-                            offset_y - config.font_size_body + config.handle_size_io * 2.0,
-                            1.0,
-                        ),
-                        ..default()
-                    });
-
-                    offset_y -= height_body / 2.0;
+                        offset_y -= height_body / 2.0;
+                    }
                 }
 
                 offset_y = offset_y_body;
 
                 let offset_x = config.padding;
 
-                for _ in 0..template.n_outputs {
+                if let Some(io_template) = &template.output {
                     parent
                         .spawn_bundle(MaterialMesh2dBundle {
                             material: resources.material_handle_output.clone(),
@@ -263,10 +389,10 @@ fn build_flow_node(
                             ),
                             ..default()
                         })
-                        .insert(FlowNodeOutput);
+                        .insert(NodeOutput);
 
                     parent.spawn_bundle(Text2dBundle {
-                        text: Text::from_section("Output", resources.text_style_body.clone()),
+                        text: Text::from_section(io_template.label.clone(), resources.text_style_body.clone()),
                         text_2d_bounds: Text2dBounds { size: bounds_io },
                         transform: Transform::from_xyz(
                             offset_x + config.padding,
@@ -277,29 +403,57 @@ fn build_flow_node(
                     });
 
                     offset_y -= height_body / 2.0;
+                } else {
+                    output = true;
                 }
             })
-            .insert(FlowNode)
-            .id();
+            .insert(Node {
+                node_type: template.node_type,
+                value: template.value,
+            })
+            .remove::<NodeTemplate>();
+
+        if output {
+            commands.entity(entity).insert(OutputNode);
+        }
 
         if template.activate {
             active_node.entity = Some(entity);
             active_node.offset = Vec2::ZERO;
         }
-
-        commands.entity(template_entity).despawn_recursive();
     }
 }
 
 fn drag_flow_node(
-    active_node: Res<ActiveFlowNode>,
+    active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
-    mut query: Query<&mut Transform, With<FlowNode>>,
+    mut query: Query<&mut Transform, With<Node>>,
 ) {
     if let Some(entity) = active_node.entity {
         if let Ok(mut transform) = query.get_mut(entity) {
             transform.translation.x = cursor.x + active_node.offset.x;
             transform.translation.y = cursor.y + active_node.offset.y;
+        }
+    }
+}
+
+fn resolve_output_nodes<N: NodeResolver + Resource>(
+    resolver: Res<N>,
+    mut ev_connection: EventReader<ConnectionEvent>,
+    q_output: Query<(Entity, &Node), With<OutputNode>>,
+    q_nodes: Query<(Entity, &Node), Without<OutputNode>>,
+    q_inputs: Query<(&Parent, &NodeInput)>,
+    q_outputs: Query<(&Parent, &NodeOutput)>,
+) {
+    if ev_connection.iter().next().is_some() {
+        for (entity, node) in q_output.iter() {
+            resolver.resolve(
+                entity,
+                node,
+                &q_nodes,
+                &q_inputs,
+                &q_outputs
+            );
         }
     }
 }

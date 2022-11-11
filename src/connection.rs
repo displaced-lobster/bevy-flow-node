@@ -1,3 +1,5 @@
+#![allow(clippy::type_complexity)]
+
 use bevy::prelude::*;
 use bevy_prototype_lyon::{
     entity::ShapeBundle,
@@ -6,7 +8,7 @@ use bevy_prototype_lyon::{
 
 use crate::{
     cursor::CursorPosition,
-    node::{FlowNodeInput, FlowNodeOutput},
+    node::{NodeInput, NodeOutput},
 };
 
 pub struct ConnectionPlugin;
@@ -15,6 +17,7 @@ impl Plugin for ConnectionPlugin {
     fn build(&self, app: &mut App) {
         app
             .insert_resource(ConnectionConfig::default())
+            .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
             .add_system(draw_connections)
             .add_system(draw_partial_connections)
@@ -38,6 +41,10 @@ impl Default for ConnectionConfig {
     }
 }
 
+pub enum ConnectionEvent {
+    Created,
+}
+
 
 #[derive(Component)]
 struct PartialConnection {
@@ -51,8 +58,8 @@ fn complete_partial_connection(
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut q_connections: Query<(Entity, &mut PartialConnection)>,
-    q_input: Query<(Entity, &GlobalTransform), With<FlowNodeInput>>,
-    q_output: Query<(Entity, &GlobalTransform), With<FlowNodeOutput>>,
+    q_input: Query<(Entity, &GlobalTransform), With<NodeInput>>,
+    q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
     if mouse_button_input.just_released(MouseButton::Left) {
         for (entity, mut connection) in q_connections.iter_mut() {
@@ -88,22 +95,25 @@ fn complete_partial_connection(
 fn convert_partial_connection(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
+    mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
-    mut q_input: Query<(Entity, &mut FlowNodeInput)>,
+    mut q_input: Query<(Entity, &mut NodeInput, &Transform)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {
             if let Some(output) = connection.output {
-                if let Ok((input_entity, mut input)) = q_input.get_mut(input) {
+                if let Ok((input_entity, mut input, transform)) = q_input.get_mut(input) {
                     input.connection = Some(output);
 
                     commands
                         .entity(input_entity)
                         .insert_bundle(ShapeBundle{
                             mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
+                            transform: *transform,
                             ..default()
                         });
 
+                    ev_connection.send(ConnectionEvent::Created);
                     commands.entity(entity).despawn_recursive();
                 }
             }
@@ -117,60 +127,58 @@ fn create_partial_connection(
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<(Entity, &GlobalTransform), With<FlowNodeInput>>,
-    q_output: Query<(Entity, &GlobalTransform), With<FlowNodeOutput>>,
+    q_input: Query<(Entity, &GlobalTransform), With<NodeInput>>,
+    q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
-    if !q_connections.is_empty() {
+    if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left)  {
         return;
     }
 
     for (entity, transform) in q_input.iter() {
         let translation = transform.translation();
 
-        if (translation.x - cursor.x).abs() < config.threshold_radius && (translation.y - cursor.y).abs() < config.threshold_radius {
-            if mouse_button_input.just_pressed(MouseButton::Left) {
-                commands
-                    .spawn()
-                    .insert(PartialConnection {
-                        input: Some(entity),
-                        output: None,
-                    })
-                    .insert_bundle(ShapeBundle{
-                        mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                        ..default()
-                    });
+        if (translation.x - cursor.x).abs() < config.threshold_radius
+            && (translation.y - cursor.y).abs() < config.threshold_radius {
+            commands
+                .spawn()
+                .insert(PartialConnection {
+                    input: Some(entity),
+                    output: None,
+                })
+                .insert_bundle(ShapeBundle{
+                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
+                    ..default()
+                });
 
-                return;
-            }
+            return;
         }
     }
 
     for (entity, trasnform) in q_output.iter() {
         let translation = trasnform.translation();
 
-        if (translation.x - cursor.x).abs() < config.threshold_radius && (translation.y - cursor.y).abs() < config.threshold_radius {
-            if mouse_button_input.just_pressed(MouseButton::Left) {
-                commands
-                    .spawn()
-                    .insert(PartialConnection {
-                        input: None,
-                        output: Some(entity),
-                    })
-                    .insert_bundle(ShapeBundle{
-                        mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                        ..default()
-                    });
+        if (translation.x - cursor.x).abs() < config.threshold_radius
+            && (translation.y - cursor.y).abs() < config.threshold_radius {
+            commands
+                .spawn()
+                .insert(PartialConnection {
+                    input: None,
+                    output: Some(entity),
+                })
+                .insert_bundle(ShapeBundle{
+                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
+                    ..default()
+                });
 
-                return;
-            }
+            return;
         }
     }
 }
 
 
 fn draw_connections(
-    mut q_input: Query<(&FlowNodeInput, &GlobalTransform, &mut Path)>,
-    q_output: Query<&GlobalTransform, With<FlowNodeOutput>>,
+    mut q_input: Query<(&NodeInput, &GlobalTransform, &mut Path)>,
+    q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
     for (input, input_transform, mut path) in q_input.iter_mut() {
         if let Some(entity) = input.connection {
@@ -194,7 +202,7 @@ fn draw_partial_connections(
     mut commands: Commands,
     cursor: Res<CursorPosition>,
     mut q_connections: Query<(Entity, &PartialConnection, &mut Path)>,
-    q_start: Query<&GlobalTransform, Or<(With<FlowNodeInput>, With<FlowNodeOutput>)>>,
+    q_start: Query<&GlobalTransform, Or<(With<NodeInput>, With<NodeOutput>)>>,
 ) {
     for (entity, connection, mut path) in q_connections.iter_mut() {
         let connection_entity = if connection.input.is_some() {
