@@ -60,10 +60,6 @@ fn complete_partial_connection<T: NodeType>(
 ) {
     if mouse_button_input.just_released(MouseButton::Left) {
         for (entity, mut connection) in q_connections.iter_mut() {
-            if connection.input.is_some() && connection.output.is_some() {
-                continue;
-            }
-
             if connection.input.is_some() {
                 for (entity, transform) in q_output.iter() {
                     let translation = transform.translation();
@@ -86,7 +82,9 @@ fn complete_partial_connection<T: NodeType>(
                         break;
                     }
                 }
-            } else {
+            }
+
+            if connection.input.is_none() || connection.output.is_none() {
                 commands.entity(entity).despawn_recursive();
             }
         }
