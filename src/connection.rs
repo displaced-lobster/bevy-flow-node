@@ -98,24 +98,32 @@ fn convert_partial_connection<T: NodeType>(
     config: Res<ConnectionConfig>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
-    mut q_input: Query<(Entity, &mut NodeInput<T>, &Transform)>,
+    q_outputs: Query<&Parent, With<NodeOutput>>,
+    mut q_inputs: Query<(Entity, &Parent, &mut NodeInput<T>, &Transform)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {
             if let Some(output) = connection.output {
-                if let Ok((input_entity, mut input, transform)) = q_input.get_mut(input) {
-                    input.connection = Some(output);
+                if let Ok((input_entity, input_parent, mut input, transform)) =
+                    q_inputs.get_mut(input)
+                {
+                    if let Ok(output_parent) = q_outputs.get(output) {
+                        if input_parent.get() != output_parent.get() {
+                            input.connection = Some(output);
 
-                    commands.entity(input_entity).insert_bundle(ShapeBundle {
-                        mode: DrawMode::Stroke(StrokeMode::new(
-                            Color::WHITE,
-                            config.connection_size,
-                        )),
-                        transform: *transform,
-                        ..default()
-                    });
+                            commands.entity(input_entity).insert_bundle(ShapeBundle {
+                                mode: DrawMode::Stroke(StrokeMode::new(
+                                    Color::WHITE,
+                                    config.connection_size,
+                                )),
+                                transform: *transform,
+                                ..default()
+                            });
 
-                    ev_connection.send(ConnectionEvent::Created);
+                            ev_connection.send(ConnectionEvent::Created);
+                        }
+                    }
+
                     commands.entity(entity).despawn_recursive();
                 }
             }
