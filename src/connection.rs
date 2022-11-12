@@ -17,6 +17,7 @@ impl<T: NodeType> Plugin for ConnectionPlugin<T> {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
+            .add_system(break_connection::<T>)
             .add_system(draw_connections::<T>)
             .add_system(draw_partial_connections::<T>)
             .add_system(complete_partial_connection::<T>)
@@ -41,12 +42,57 @@ impl Default for ConnectionConfig {
 
 pub enum ConnectionEvent {
     Created,
+    Destroyed,
 }
 
 #[derive(Component)]
 struct PartialConnection {
     input: Option<Entity>,
     output: Option<Entity>,
+}
+
+fn break_connection<T: NodeType>(
+    mut commands: Commands,
+    config: Res<ConnectionConfig>,
+    cursor: Res<CursorPosition>,
+    mouse_button_input: Res<Input<MouseButton>>,
+    mut ev_connection: EventWriter<ConnectionEvent>,
+    mut q_inputs: Query<(Entity, &mut NodeInput<T>, &GlobalTransform)>,
+) {
+    if !mouse_button_input.just_pressed(MouseButton::Left) {
+        return;
+    }
+
+    for (entity, mut node_input, transform) in q_inputs.iter_mut() {
+        if node_input.connection.is_none() {
+            continue;
+        }
+
+        let translation = transform.translation();
+
+        if (translation.x - cursor.x).abs() < config.threshold_radius
+            && (translation.y - cursor.y).abs() < config.threshold_radius
+        {
+            commands
+                .spawn()
+                .insert(PartialConnection {
+                    input: None,
+                    output: node_input.connection,
+                })
+                .insert_bundle(ShapeBundle {
+                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
+                    ..default()
+                });
+
+            commands
+                .entity(entity)
+                .insert(DrawMode::Stroke(StrokeMode::new(Color::BLACK, 0.0)));
+            node_input.connection = None;
+            ev_connection.send(ConnectionEvent::Destroyed);
+
+            return;
+        }
+    }
 }
 
 fn complete_partial_connection<T: NodeType>(
@@ -135,14 +181,18 @@ fn create_partial_connection<T: NodeType>(
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<(Entity, &GlobalTransform), With<NodeInput<T>>>,
+    q_input: Query<(Entity, &NodeInput<T>, &GlobalTransform)>,
     q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
     if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left) {
         return;
     }
 
-    for (entity, transform) in q_input.iter() {
+    for (entity, node_input, transform) in q_input.iter() {
+        if node_input.connection.is_some() {
+            continue;
+        }
+
         let translation = transform.translation();
 
         if (translation.x - cursor.x).abs() < config.threshold_radius
