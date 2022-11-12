@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
@@ -8,6 +8,7 @@ use bevy_node_editor::{
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<NoOpNodes>::default())
         .add_startup_system(setup)
