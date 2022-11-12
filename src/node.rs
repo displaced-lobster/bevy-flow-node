@@ -28,9 +28,9 @@ impl<T: Nodes> Plugin for NodePlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
             .add_startup_system(setup)
-            .add_system(activate_flow_node)
-            .add_system(build_flow_node::<T>)
-            .add_system(drag_flow_node::<T>)
+            .add_system(activate_node)
+            .add_system(build_node::<T>)
+            .add_system(drag_node::<T>)
             .add_system(resolve_output_nodes::<T>);
     }
 }
@@ -178,7 +178,7 @@ impl<T: Nodes> Default for NodeTemplate<T> {
             node: T::default(),
             position: Vec2::ZERO,
             output_label: None,
-            title: "Flow Node".to_string(),
+            title: "Node".to_string(),
             width: 200.0,
         }
     }
@@ -219,7 +219,7 @@ fn setup(
     });
 }
 
-fn activate_flow_node(
+fn activate_node(
     mut active_node: ResMut<ActiveNode>,
     config: Res<NodeConfig>,
     cursor: Res<CursorPosition>,
@@ -250,7 +250,7 @@ fn activate_flow_node(
     }
 }
 
-fn build_flow_node<T: Nodes>(
+fn build_node<T: Nodes>(
     mut commands: Commands,
     config: Res<NodeConfig>,
     resources: Res<NodeResources>,
@@ -405,7 +405,7 @@ fn build_flow_node<T: Nodes>(
     }
 }
 
-fn drag_flow_node<T: Nodes>(
+fn drag_node<T: Nodes>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
     mut query: Query<&mut Transform, With<Node<T>>>,
