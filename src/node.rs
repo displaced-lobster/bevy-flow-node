@@ -43,7 +43,7 @@ struct ActiveNode {
 
 #[derive(Component, Default)]
 pub struct Node<T: Nodes> {
-    pub node: T,
+    node: T,
 }
 
 impl<T: Nodes> Node<T> {
@@ -66,6 +66,10 @@ impl<T: Nodes> Node<T> {
         }
 
         inputs
+    }
+
+    pub fn kind(&self) -> T {
+        self.node
     }
 
     pub fn resolve(
