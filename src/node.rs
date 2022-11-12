@@ -3,7 +3,7 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
-pub trait NodeType: 'static + Clone + Copy + Default + Sized + Send + Sync {
+pub trait Nodes: 'static + Clone + Copy + Default + Sized + Send + Sync {
     type NodeIO: Clone + Copy + Default + Send + Sync;
 
     fn resolve(
@@ -16,15 +16,15 @@ pub trait NodeType: 'static + Clone + Copy + Default + Sized + Send + Sync {
     ) -> Self::NodeIO;
 }
 
-pub struct NodePlugin<T: NodeType>(PhantomData<T>);
+pub struct NodePlugin<T: Nodes>(PhantomData<T>);
 
-impl<T: NodeType> Default for NodePlugin<T> {
+impl<T: Nodes> Default for NodePlugin<T> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<T: NodeType> Plugin for NodePlugin<T> {
+impl<T: Nodes> Plugin for NodePlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
             .add_startup_system(setup)
@@ -42,11 +42,11 @@ struct ActiveNode {
 }
 
 #[derive(Component, Default)]
-pub struct Node<T: NodeType> {
-    pub node_type: T,
+pub struct Node<T: Nodes> {
+    pub node: T,
 }
 
-impl<T: NodeType> Node<T> {
+impl<T: Nodes> Node<T> {
     pub fn get_inputs(
         &self,
         entity: Entity,
@@ -75,7 +75,7 @@ impl<T: NodeType> Node<T> {
         q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> T::NodeIO {
-        self.node_type
+        self.node
             .resolve(entity, self, q_nodes, q_inputs, q_outputs)
     }
 }
@@ -104,14 +104,14 @@ impl Default for NodeConfig {
 struct NodeHandle;
 
 #[derive(Component, Default)]
-pub struct NodeInput<T: NodeType> {
+pub struct NodeInput<T: Nodes> {
     pub connection: Option<Entity>,
     pub default: T::NodeIO,
     pub label: String,
     _phantom: PhantomData<T>,
 }
 
-impl<T: NodeType> NodeInput<T> {
+impl<T: Nodes> NodeInput<T> {
     pub fn get_input(
         &self,
         q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
@@ -156,22 +156,22 @@ impl Default for NodeIOTemplate {
 }
 
 #[derive(Component)]
-pub struct NodeTemplate<T: NodeType> {
+pub struct NodeTemplate<T: Nodes> {
     pub activate: bool,
     pub inputs: Option<Vec<NodeIOTemplate>>,
-    pub node_type: T,
+    pub node: T,
     pub output_label: Option<String>,
     pub position: Vec2,
     pub title: String,
     pub width: f32,
 }
 
-impl<T: NodeType> Default for NodeTemplate<T> {
+impl<T: Nodes> Default for NodeTemplate<T> {
     fn default() -> Self {
         Self {
             activate: false,
             inputs: None,
-            node_type: T::default(),
+            node: T::default(),
             position: Vec2::ZERO,
             output_label: None,
             title: "Flow Node".to_string(),
@@ -246,7 +246,7 @@ fn activate_flow_node(
     }
 }
 
-fn build_flow_node<T: NodeType>(
+fn build_flow_node<T: Nodes>(
     mut commands: Commands,
     config: Res<NodeConfig>,
     resources: Res<NodeResources>,
@@ -386,7 +386,7 @@ fn build_flow_node<T: NodeType>(
                 }
             })
             .insert(Node {
-                node_type: template.node_type,
+                node: template.node,
             })
             .remove::<NodeTemplate<T>>();
 
@@ -401,7 +401,7 @@ fn build_flow_node<T: NodeType>(
     }
 }
 
-fn drag_flow_node<T: NodeType>(
+fn drag_flow_node<T: Nodes>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
     mut query: Query<&mut Transform, With<Node<T>>>,
@@ -414,7 +414,7 @@ fn drag_flow_node<T: NodeType>(
     }
 }
 
-fn resolve_output_nodes<T: NodeType>(
+fn resolve_output_nodes<T: Nodes>(
     mut ev_connection: EventReader<ConnectionEvent>,
     q_output: Query<(Entity, &Node<T>), With<OutputNode>>,
     q_nodes: Query<(Entity, &Node<T>), Without<OutputNode>>,

@@ -6,13 +6,13 @@ use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
-    node::{NodeInput, NodeOutput, NodeType},
+    node::{NodeInput, NodeOutput, Nodes},
 };
 
 #[derive(Default)]
-pub struct ConnectionPlugin<T: NodeType>(PhantomData<T>);
+pub struct ConnectionPlugin<T: Nodes>(PhantomData<T>);
 
-impl<T: NodeType> Plugin for ConnectionPlugin<T> {
+impl<T: Nodes> Plugin for ConnectionPlugin<T> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
@@ -51,7 +51,7 @@ struct PartialConnection {
     output: Option<Entity>,
 }
 
-fn break_connection<T: NodeType>(
+fn break_connection<T: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
@@ -95,7 +95,7 @@ fn break_connection<T: NodeType>(
     }
 }
 
-fn complete_partial_connection<T: NodeType>(
+fn complete_partial_connection<T: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
@@ -137,7 +137,7 @@ fn complete_partial_connection<T: NodeType>(
     }
 }
 
-fn convert_partial_connection<T: NodeType>(
+fn convert_partial_connection<T: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     mut ev_connection: EventWriter<ConnectionEvent>,
@@ -175,7 +175,7 @@ fn convert_partial_connection<T: NodeType>(
     }
 }
 
-fn create_partial_connection<T: NodeType>(
+fn create_partial_connection<T: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
@@ -235,7 +235,7 @@ fn create_partial_connection<T: NodeType>(
     }
 }
 
-fn draw_connections<T: NodeType>(
+fn draw_connections<T: Nodes>(
     mut q_input: Query<(&NodeInput<T>, &GlobalTransform, &mut Path)>,
     q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
@@ -257,7 +257,7 @@ fn draw_connections<T: NodeType>(
     }
 }
 
-fn draw_partial_connections<T: NodeType>(
+fn draw_partial_connections<T: Nodes>(
     mut commands: Commands,
     cursor: Res<CursorPosition>,
     mut q_connections: Query<(Entity, &PartialConnection, &mut Path)>,

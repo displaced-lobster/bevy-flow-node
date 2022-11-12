@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
+    Node, NodeInput, NodeOutput, NodePlugins, Nodes, OutputNode,
 };
 
 fn main() {
@@ -27,7 +27,7 @@ impl Default for MathNodes {
     }
 }
 
-impl NodeType for MathNodes {
+impl Nodes for MathNodes {
     type NodeIO = f32;
 
     fn resolve(
@@ -40,7 +40,7 @@ impl NodeType for MathNodes {
     ) -> Self::NodeIO {
         let inputs = node.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
-        match node.node_type {
+        match node.node {
             MathNodes::Add => {
                 let a: f32 = inputs["a"];
                 let b: f32 = inputs["b"];
@@ -75,7 +75,7 @@ impl MathNodes {
                     },
                 ]),
                 output_label: Some("result".to_string()),
-                node_type: *self,
+                node: *self,
                 ..default()
             },
             Self::Print => NodeTemplate {
@@ -85,14 +85,14 @@ impl MathNodes {
                     label: "value".to_string(),
                     ..Default::default()
                 }]),
-                node_type: *self,
+                node: *self,
                 ..default()
             },
             Self::Value(value) => NodeTemplate {
                 position,
                 title: "Value".to_string(),
                 output_label: Some(format!("{}", value)),
-                node_type: *self,
+                node: *self,
                 ..Default::default()
             },
         }

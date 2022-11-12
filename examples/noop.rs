@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeInput, NodeOutput, NodePlugins, NodeType, OutputNode,
+    Node, NodeInput, NodeOutput, NodePlugins, Nodes, OutputNode,
 };
 
 fn main() {
@@ -17,7 +17,7 @@ fn main() {
 #[derive(Clone, Copy, Default)]
 struct NoOpNodes;
 
-impl NodeType for NoOpNodes {
+impl Nodes for NoOpNodes {
     type NodeIO = ();
 
     fn resolve(
