@@ -74,10 +74,7 @@ impl MathNodes {
                         ..default()
                     },
                 ]),
-                output: Some(NodeIOTemplate {
-                    label: "result".to_string(),
-                    ..default()
-                }),
+                output_label: Some("result".to_string()),
                 node_type: *self,
                 ..default()
             },
@@ -91,13 +88,10 @@ impl MathNodes {
                 node_type: *self,
                 ..default()
             },
-            Self::Value(_) => NodeTemplate {
+            Self::Value(value) => NodeTemplate {
                 position,
                 title: "Value".to_string(),
-                output: Some(NodeIOTemplate {
-                    label: "Value".to_string(),
-                    ..Default::default()
-                }),
+                output_label: Some(format!("{}", value)),
                 node_type: *self,
                 ..Default::default()
             },

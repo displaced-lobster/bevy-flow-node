@@ -38,10 +38,7 @@ fn setup(mut commands: Commands) {
     commands.spawn().insert(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(-200.0, 0.0),
         title: "Node 1".to_string(),
-        output: Some(NodeIOTemplate {
-            label: "Output".to_string(),
-            ..default()
-        }),
+        output_label: Some("Output".to_string()),
         ..default()
     });
 

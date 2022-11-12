@@ -158,24 +158,24 @@ impl Default for NodeIOTemplate {
 #[derive(Component)]
 pub struct NodeTemplate<T: NodeType> {
     pub activate: bool,
+    pub inputs: Option<Vec<NodeIOTemplate>>,
     pub node_type: T,
+    pub output_label: Option<String>,
     pub position: Vec2,
     pub title: String,
     pub width: f32,
-    pub inputs: Option<Vec<NodeIOTemplate>>,
-    pub output: Option<NodeIOTemplate>,
 }
 
 impl<T: NodeType> Default for NodeTemplate<T> {
     fn default() -> Self {
         Self {
             activate: false,
+            inputs: None,
             node_type: T::default(),
             position: Vec2::ZERO,
+            output_label: None,
             title: "Flow Node".to_string(),
             width: 200.0,
-            inputs: None,
-            output: None,
         }
     }
 }
@@ -353,7 +353,7 @@ fn build_flow_node<T: NodeType>(
 
                 let offset_x = config.padding;
 
-                if let Some(io_template) = &template.output {
+                if let Some(label) = &template.output_label {
                     parent
                         .spawn_bundle(MaterialMesh2dBundle {
                             material: resources.material_handle_output.clone(),
@@ -370,10 +370,7 @@ fn build_flow_node<T: NodeType>(
                         .insert(NodeOutput);
 
                     parent.spawn_bundle(Text2dBundle {
-                        text: Text::from_section(
-                            io_template.label.clone(),
-                            resources.text_style_body.clone(),
-                        ),
+                        text: Text::from_section(label.clone(), resources.text_style_body.clone()),
                         text_2d_bounds: Text2dBounds { size: bounds_io },
                         transform: Transform::from_xyz(
                             offset_x + config.padding,
