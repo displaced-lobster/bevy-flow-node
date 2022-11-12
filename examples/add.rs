@@ -17,6 +17,7 @@ fn main() {
 #[derive(Clone, Copy)]
 enum MathNodes {
     Add,
+    Mult,
     Print,
     Value(f32),
 }
@@ -47,13 +48,19 @@ impl Nodes for MathNodes {
 
                 a + b
             }
-            MathNodes::Value(value) => value,
+            MathNodes::Mult => {
+                let a: f32 = inputs["a"];
+                let b: f32 = inputs["b"];
+
+                a * b
+            }
             MathNodes::Print => {
                 let value = inputs["value"];
 
                 println!("{:?}", value);
                 value
             }
+            MathNodes::Value(value) => value,
         }
     }
 }
@@ -76,6 +83,23 @@ impl MathNodes {
                 ]),
                 output_label: Some("result".to_string()),
                 node: *self,
+                ..default()
+            },
+            Self::Mult => NodeTemplate {
+                position,
+                title: "Multiply".to_string(),
+                inputs: Some(vec![
+                    NodeIOTemplate {
+                        label: "a".to_string(),
+                        ..default()
+                    },
+                    NodeIOTemplate {
+                        label: "b".to_string(),
+                        ..default()
+                    },
+                ]),
+                node: *self,
+                output_label: Some("value".to_string()),
                 ..default()
             },
             Self::Print => NodeTemplate {
@@ -117,4 +141,8 @@ fn setup(mut commands: Commands) {
     commands
         .spawn()
         .insert(MathNodes::Print.to_template(Vec2::new(450.0, 0.0)));
+
+    commands
+        .spawn()
+        .insert(MathNodes::Mult.to_template(Vec2::new(0.0, 0.0)));
 }
