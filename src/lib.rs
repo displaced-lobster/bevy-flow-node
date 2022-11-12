@@ -3,9 +3,13 @@ use std::marker::PhantomData;
 
 pub mod connection;
 pub mod cursor;
+pub mod menu;
 pub mod node;
 
-pub use crate::node::{Node, NodeInput, NodeOutput, Nodes, OutputNode};
+pub use crate::{
+    menu::{NodeMenu, NodeMenuPlugin},
+    node::{Node, NodeInput, NodeOutput, Nodes, OutputNode},
+};
 
 #[derive(Default)]
 pub struct NodePlugins<T: Nodes>(PhantomData<T>);

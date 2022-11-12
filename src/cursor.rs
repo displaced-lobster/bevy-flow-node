@@ -13,6 +13,8 @@ impl Plugin for CursorPlugin {
 pub struct CursorPosition {
     pub x: f32,
     pub y: f32,
+    pub screen_x: f32,
+    pub screen_y: f32,
 }
 
 impl CursorPosition {
@@ -41,5 +43,7 @@ fn update_cursor_position(
 
         cursor.x = world_pos.x;
         cursor.y = world_pos.y;
+        cursor.screen_x = screen_pos.x;
+        cursor.screen_y = window_size.y - screen_pos.y;
     }
 }

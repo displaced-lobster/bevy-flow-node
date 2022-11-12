@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeInput, NodeOutput, NodePlugins, Nodes, OutputNode,
+    Node, NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, Nodes, OutputNode,
 };
 
 fn main() {
@@ -10,8 +10,25 @@ fn main() {
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<MathNodes>::default())
+        .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
         .add_startup_system(setup)
         .run();
+}
+
+#[derive(Default)]
+struct MathMenu;
+
+impl NodeMenu for MathMenu {
+    type Nodes = MathNodes;
+
+    fn options(&self) -> Vec<(String, Self::Nodes)> {
+        vec![
+            ("Value".to_string(), MathNodes::Value(1.0)),
+            ("Add".to_string(), MathNodes::Add),
+            ("Multiply".to_string(), MathNodes::Mult),
+            ("Print".to_string(), MathNodes::Print),
+        ]
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -65,11 +82,10 @@ impl Nodes for MathNodes {
     }
 }
 
-impl MathNodes {
-    fn to_template(&self, position: Vec2) -> NodeTemplate<Self> {
+impl Into<NodeTemplate<MathNodes>> for MathNodes {
+    fn into(self) -> NodeTemplate<MathNodes> {
         match self {
             Self::Add => NodeTemplate {
-                position,
                 title: "Add".to_string(),
                 inputs: Some(vec![
                     NodeIOTemplate {
@@ -82,11 +98,10 @@ impl MathNodes {
                     },
                 ]),
                 output_label: Some("result".to_string()),
-                node: *self,
+                node: self,
                 ..default()
             },
             Self::Mult => NodeTemplate {
-                position,
                 title: "Multiply".to_string(),
                 inputs: Some(vec![
                     NodeIOTemplate {
@@ -98,25 +113,23 @@ impl MathNodes {
                         ..default()
                     },
                 ]),
-                node: *self,
+                node: self,
                 output_label: Some("value".to_string()),
                 ..default()
             },
             Self::Print => NodeTemplate {
-                position,
                 title: "Print".to_string(),
                 inputs: Some(vec![NodeIOTemplate {
                     label: "value".to_string(),
                     ..Default::default()
                 }]),
-                node: *self,
+                node: self,
                 ..default()
             },
             Self::Value(value) => NodeTemplate {
-                position,
                 title: "Value".to_string(),
                 output_label: Some(format!("{}", value)),
-                node: *self,
+                node: self,
                 ..Default::default()
             },
         }
@@ -126,23 +139,7 @@ impl MathNodes {
 fn setup(mut commands: Commands) {
     commands.spawn_bundle(Camera2dBundle::default());
 
-    commands
-        .spawn()
-        .insert(MathNodes::Value(5.0).to_template(Vec2::new(-150.0, 100.0)));
+    let template: NodeTemplate<MathNodes> = MathNodes::Print.into();
 
-    commands
-        .spawn()
-        .insert(MathNodes::Value(7.0).to_template(Vec2::new(-150.0, -100.0)));
-
-    commands
-        .spawn()
-        .insert(MathNodes::Add.to_template(Vec2::new(150.0, 0.0)));
-
-    commands
-        .spawn()
-        .insert(MathNodes::Print.to_template(Vec2::new(450.0, 0.0)));
-
-    commands
-        .spawn()
-        .insert(MathNodes::Mult.to_template(Vec2::new(0.0, 0.0)));
+    commands.spawn().insert(template);
 }
