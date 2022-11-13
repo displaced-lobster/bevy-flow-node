@@ -6,14 +6,7 @@ use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 pub trait Nodes: 'static + Clone + Copy + Default + Sized + Send + Sync {
     type NodeIO: Clone + Copy + Default + Send + Sync;
 
-    fn resolve(
-        &self,
-        entity: Entity,
-        node: &Node<Self>,
-        q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
-        q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> Self::NodeIO;
+    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO;
 }
 
 pub struct NodePlugin<T: Nodes>(PhantomData<T>);
@@ -75,8 +68,9 @@ impl<T: Nodes> Node<T> {
         q_inputs: &Query<(&Parent, &NodeInput<T>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> T::NodeIO {
-        self.node
-            .resolve(entity, self, q_nodes, q_inputs, q_outputs)
+        let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
+
+        self.node.resolve(&inputs)
     }
 }
 

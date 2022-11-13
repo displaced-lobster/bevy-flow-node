@@ -1,9 +1,9 @@
 use bevy::{prelude::*, winit::WinitSettings};
-
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, Nodes, OutputNode,
+    NodeMenu, NodeMenuPlugin, NodePlugins, Nodes,
 };
+use std::collections::HashMap;
 
 fn main() {
     App::new()
@@ -49,16 +49,7 @@ impl Default for MathNodes {
 impl Nodes for MathNodes {
     type NodeIO = f32;
 
-    fn resolve(
-        &self,
-        entity: Entity,
-        node: &Node<Self>,
-        q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
-        q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> Self::NodeIO {
-        let inputs = node.get_inputs(entity, q_nodes, q_inputs, q_outputs);
-
+    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
         match *self {
             MathNodes::Add => {
                 let a: f32 = inputs["a"];

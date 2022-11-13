@@ -2,7 +2,7 @@ use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    Node, NodeInput, NodeOutput, NodePlugins, Nodes, OutputNode,
+    NodePlugins, Nodes,
 };
 
 fn main() {
@@ -21,14 +21,7 @@ struct NoOpNodes;
 impl Nodes for NoOpNodes {
     type NodeIO = ();
 
-    fn resolve(
-        &self,
-        _entity: Entity,
-        _node: &Node<Self>,
-        _q_nodes: &Query<(Entity, &Node<Self>), Without<OutputNode>>,
-        _q_inputs: &Query<(&Parent, &NodeInput<Self>)>,
-        _q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> Self::NodeIO {
+    fn resolve(&self, _inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {
         ()
     }
 }
