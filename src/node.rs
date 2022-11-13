@@ -68,10 +68,6 @@ impl<T: Nodes> Node<T> {
         inputs
     }
 
-    pub fn kind(&self) -> T {
-        self.node
-    }
-
     pub fn resolve(
         &self,
         entity: Entity,

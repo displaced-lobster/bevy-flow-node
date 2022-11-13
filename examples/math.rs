@@ -59,7 +59,7 @@ impl Nodes for MathNodes {
     ) -> Self::NodeIO {
         let inputs = node.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
-        match node.kind() {
+        match *self {
             MathNodes::Add => {
                 let a: f32 = inputs["a"];
                 let b: f32 = inputs["b"];
