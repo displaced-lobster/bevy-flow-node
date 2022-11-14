@@ -248,7 +248,12 @@ fn build_node<T: Nodes>(
     query: Query<(Entity, &NodeTemplate<T>)>,
 ) {
     for (entity, template) in query.iter() {
-        let n_io = 2;
+        let n_io = if let Some(inputs) = &template.inputs {
+            inputs.len()
+        } else {
+            1
+        };
+
         let height_body = (config.font_size_body + config.padding) * n_io as f32;
         let height_title = config.font_size_title + config.padding * 2.0;
         let height = height_body + height_title;
