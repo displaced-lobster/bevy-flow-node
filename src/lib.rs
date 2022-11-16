@@ -5,10 +5,13 @@ pub mod connection;
 pub mod cursor;
 pub mod menu;
 pub mod node;
+pub mod widget;
+pub mod widgets;
 
 pub use crate::{
     menu::{NodeMenu, NodeMenuPlugin},
-    node::{Node, NodeInput, NodeOutput, Nodes, OutputNode},
+    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSlot, Nodes, OutputNode},
+    widget::{Widget, WidgetPlugin},
 };
 
 #[derive(Default)]

@@ -41,6 +41,7 @@ impl Default for ConnectionConfig {
 }
 
 pub enum ConnectionEvent {
+    Propagate,
     Created,
     Destroyed,
 }
@@ -51,13 +52,13 @@ struct PartialConnection {
     output: Option<Entity>,
 }
 
-fn break_connection<T: Nodes>(
+fn break_connection<N: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut ev_connection: EventWriter<ConnectionEvent>,
-    mut q_inputs: Query<(Entity, &mut NodeInput<T>, &GlobalTransform)>,
+    mut q_inputs: Query<(Entity, &mut NodeInput<N>, &GlobalTransform)>,
 ) {
     if !mouse_button_input.just_pressed(MouseButton::Left) {
         return;
@@ -137,13 +138,13 @@ fn complete_partial_connection<T: Nodes>(
     }
 }
 
-fn convert_partial_connection<T: Nodes>(
+fn convert_partial_connection<N: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
     q_outputs: Query<&Parent, With<NodeOutput>>,
-    mut q_inputs: Query<(Entity, &Parent, &mut NodeInput<T>, &Transform)>,
+    mut q_inputs: Query<(Entity, &Parent, &mut NodeInput<N>, &Transform)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {

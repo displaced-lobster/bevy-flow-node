@@ -155,7 +155,7 @@ fn select_menu_option<T: Nodes + Into<NodeTemplate<T>>>(
         match interaction {
             Interaction::Clicked => {
                 commands.entity(entity).despawn_recursive();
-                events.send(MenuEvent::Selected(option.node));
+                events.send(MenuEvent::Selected(option.node.clone()));
             }
             _ => {}
         }

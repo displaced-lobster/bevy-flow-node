@@ -3,8 +3,8 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
-pub trait Nodes: 'static + Clone + Copy + Default + Sized + Send + Sync {
-    type NodeIO: Clone + Copy + Default + Send + Sync;
+pub trait Nodes: 'static + Clone + Default + Sized + Send + Sync {
+    type NodeIO: Clone + Default + Send + Sync;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO;
 }
@@ -17,14 +17,15 @@ impl<T: Nodes> Default for NodePlugin<T> {
     }
 }
 
-impl<T: Nodes> Plugin for NodePlugin<T> {
+impl<N: Nodes> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
+            .add_event::<NodeEvent<N>>()
             .add_startup_system(setup)
             .add_system(activate_node)
-            .add_system(build_node::<T>)
-            .add_system(drag_node::<T>)
-            .add_system(resolve_output_nodes::<T>);
+            .add_system(build_node::<N>)
+            .add_system(drag_node::<N>)
+            .add_system(resolve_output_nodes::<N>);
     }
 }
 
@@ -36,7 +37,7 @@ struct ActiveNode {
 
 #[derive(Component, Default)]
 pub struct Node<T: Nodes> {
-    node: T,
+    pub node: T,
 }
 
 impl<T: Nodes> Node<T> {
@@ -120,12 +121,16 @@ impl<T: Nodes> NodeInput<T> {
             }
         }
 
-        self.default
+        self.default.clone()
     }
 }
 
 #[derive(Component)]
 pub struct NodeOutput;
+
+pub enum NodeEvent<N: Nodes> {
+    Resolved(N::NodeIO),
+}
 
 struct NodeResources {
     material_handle_input: Handle<ColorMaterial>,
@@ -135,6 +140,12 @@ struct NodeResources {
     mesh_handle_io: Handle<Mesh>,
     text_style_body: TextStyle,
     text_style_title: TextStyle,
+}
+
+#[derive(Component, Clone, Copy, Default)]
+pub struct NodeSlot {
+    pub height: f32,
+    pub width: f32,
 }
 
 pub struct NodeIOTemplate {
@@ -152,10 +163,12 @@ impl Default for NodeIOTemplate {
 #[derive(Component)]
 pub struct NodeTemplate<T: Nodes> {
     pub activate: bool,
+    pub height: f32,
     pub inputs: Option<Vec<NodeIOTemplate>>,
     pub node: T,
     pub output_label: Option<String>,
     pub position: Vec2,
+    pub slot: Option<NodeSlot>,
     pub title: String,
     pub width: f32,
 }
@@ -164,10 +177,12 @@ impl<T: Nodes> Default for NodeTemplate<T> {
     fn default() -> Self {
         Self {
             activate: false,
+            height: 0.0,
             inputs: None,
             node: T::default(),
             position: Vec2::ZERO,
             output_label: None,
+            slot: None,
             title: "Node".to_string(),
             width: 200.0,
         }
@@ -251,10 +266,16 @@ fn build_node<T: Nodes>(
         let n_io = if let Some(inputs) = &template.inputs {
             inputs.len()
         } else {
-            1
+            0
+        };
+        let slot_height = if let Some(slot) = template.slot {
+            slot.height + 2.0 * config.padding
+        } else {
+            0.0
         };
 
-        let height_body = (config.font_size_body + config.padding) * n_io as f32;
+        let height_io = config.font_size_body + config.padding * 2.0;
+        let height_body = height_io * (n_io + 1) as f32 + slot_height;
         let height_title = config.font_size_title + config.padding * 2.0;
         let height = height_body + height_title;
         let node_size = Vec2::new(template.width, height);
@@ -301,9 +322,41 @@ fn build_node<T: Nodes>(
                     ..default()
                 });
 
-                offset_y -= height_title / 2.0 + config.padding;
+                offset_y -= height_title;
 
-                let offset_y_body = offset_y;
+                if let Some(label) = &template.output_label {
+                    let offset_x = config.padding;
+
+                    parent
+                        .spawn_bundle(MaterialMesh2dBundle {
+                            material: resources.material_handle_output.clone(),
+                            mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                            transform: Transform::from_xyz(
+                                offset_x + node_size.x / 2.0
+                                    - 2.0 * config.handle_size_io
+                                    - config.padding,
+                                offset_y - config.handle_size_io - config.padding,
+                                2.0,
+                            ),
+                            ..default()
+                        })
+                        .insert(NodeOutput);
+
+                    parent.spawn_bundle(Text2dBundle {
+                        text: Text::from_section(label.clone(), resources.text_style_body.clone()),
+                        text_2d_bounds: Text2dBounds { size: bounds_io },
+                        transform: Transform::from_xyz(
+                            offset_x + config.padding,
+                            offset_y - config.font_size_body + config.handle_size_io * 2.0,
+                            1.0,
+                        ),
+                        ..default()
+                    });
+                } else {
+                    output = true;
+                }
+
+                offset_y -= height_io;
 
                 if let Some(inputs) = &template.inputs {
                     for io_template in inputs.iter() {
@@ -344,48 +397,28 @@ fn build_node<T: Nodes>(
                             ..default()
                         });
 
-                        offset_y -= height_body / 2.0;
+                        offset_y -= height_io;
                     }
                 }
 
-                offset_y = offset_y_body;
+                if let Some(slot) = template.slot {
+                    let mut slot = slot;
 
-                let offset_x = config.padding;
-
-                if let Some(label) = &template.output_label {
+                    slot.width = template.width - 2.0 * config.padding;
                     parent
-                        .spawn_bundle(MaterialMesh2dBundle {
-                            material: resources.material_handle_output.clone(),
-                            mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                        .spawn_bundle(SpatialBundle {
                             transform: Transform::from_xyz(
-                                offset_x + node_size.x / 2.0
-                                    - 2.0 * config.handle_size_io
-                                    - config.padding,
-                                offset_y - config.handle_size_io - config.padding,
-                                2.0,
+                                offset_x + config.padding,
+                                offset_y,
+                                1.0,
                             ),
                             ..default()
                         })
-                        .insert(NodeOutput);
-
-                    parent.spawn_bundle(Text2dBundle {
-                        text: Text::from_section(label.clone(), resources.text_style_body.clone()),
-                        text_2d_bounds: Text2dBounds { size: bounds_io },
-                        transform: Transform::from_xyz(
-                            offset_x + config.padding,
-                            offset_y - config.font_size_body + config.handle_size_io * 2.0,
-                            1.0,
-                        ),
-                        ..default()
-                    });
-
-                    offset_y -= height_body / 2.0;
-                } else {
-                    output = true;
+                        .insert(slot);
                 }
             })
             .insert(Node {
-                node: template.node,
+                node: template.node.clone(),
             })
             .remove::<NodeTemplate<T>>();
 
@@ -413,16 +446,19 @@ fn drag_node<T: Nodes>(
     }
 }
 
-fn resolve_output_nodes<T: Nodes>(
+fn resolve_output_nodes<N: Nodes>(
+    mut ev_resolution: EventWriter<NodeEvent<N>>,
     mut ev_connection: EventReader<ConnectionEvent>,
-    q_output: Query<(Entity, &Node<T>), With<OutputNode>>,
-    q_nodes: Query<(Entity, &Node<T>), Without<OutputNode>>,
-    q_inputs: Query<(&Parent, &NodeInput<T>)>,
+    q_output: Query<(Entity, &Node<N>), With<OutputNode>>,
+    q_nodes: Query<(Entity, &Node<N>), Without<OutputNode>>,
+    q_inputs: Query<(&Parent, &NodeInput<N>)>,
     q_outputs: Query<(&Parent, &NodeOutput)>,
 ) {
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
-            node.resolve(entity, &q_nodes, &q_inputs, &q_outputs);
+            ev_resolution.send(NodeEvent::Resolved(
+                node.resolve(entity, &q_nodes, &q_inputs, &q_outputs),
+            ));
         }
     }
 }
