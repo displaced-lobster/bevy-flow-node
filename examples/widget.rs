@@ -97,7 +97,7 @@ impl Widget<IONodes> for DisplayWidget {
         self.size = area;
 
         commands
-            .spawn_bundle(Text2dBundle {
+            .spawn(Text2dBundle {
                 text: Text::from_section("Hello World", text_style_title),
                 transform: Transform::from_xyz(0.0, 0.0, 2.0),
                 ..default()
@@ -111,13 +111,13 @@ impl Widget<IONodes> for DisplayWidget {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     let start_value = "Hello World!".to_string();
 
-    commands
-        .spawn_bundle(SpatialBundle::default())
-        .insert(NodeTemplate::<IONodes> {
+    commands.spawn((
+        SpatialBundle::default(),
+        NodeTemplate::<IONodes> {
             position: Vec2::new(-220.0, 0.0),
             title: "Input".to_string(),
             output_label: Some("output".to_string()),
@@ -127,16 +127,17 @@ fn setup(mut commands: Commands) {
                 ..default()
             }),
             ..default()
-        })
-        .insert(TextInputWidget::<IONodes> {
+        },
+        TextInputWidget::<IONodes> {
             size: Vec2::new(200.0, 20.0),
             value: NodeString(start_value),
             ..default()
-        });
+        },
+    ));
 
-    commands
-        .spawn_bundle(SpatialBundle::default())
-        .insert(NodeTemplate::<IONodes> {
+    commands.spawn((
+        SpatialBundle::default(),
+        NodeTemplate::<IONodes> {
             position: Vec2::new(220.0, 0.0),
             title: "Output".to_string(),
             inputs: Some(vec![NodeIOTemplate {
@@ -149,8 +150,9 @@ fn setup(mut commands: Commands) {
                 ..default()
             }),
             ..default()
-        })
-        .insert(DisplayWidget::default());
+        },
+        DisplayWidget::default(),
+    ));
 }
 
 fn update_display_widget(

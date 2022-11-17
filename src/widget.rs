@@ -43,7 +43,7 @@ impl<N: Nodes, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct ActiveWidget {
     entity: Option<Entity>,
 }

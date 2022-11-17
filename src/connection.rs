@@ -26,6 +26,7 @@ impl<T: Nodes> Plugin for ConnectionPlugin<T> {
     }
 }
 
+#[derive(Resource)]
 pub struct ConnectionConfig {
     pub connection_size: f32,
     pub threshold_radius: f32,
@@ -74,16 +75,16 @@ fn break_connection<N: Nodes>(
         if (translation.x - cursor.x).abs() < config.threshold_radius
             && (translation.y - cursor.y).abs() < config.threshold_radius
         {
-            commands
-                .spawn()
-                .insert(PartialConnection {
+            commands.spawn((
+                PartialConnection {
                     input: None,
                     output: node_input.connection,
-                })
-                .insert_bundle(ShapeBundle {
+                },
+                ShapeBundle {
                     mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
                     ..default()
-                });
+                },
+            ));
 
             commands
                 .entity(entity)
@@ -156,7 +157,7 @@ fn convert_partial_connection<N: Nodes>(
                         if input_parent.get() != output_parent.get() {
                             input.connection = Some(output);
 
-                            commands.entity(input_entity).insert_bundle(ShapeBundle {
+                            commands.entity(input_entity).insert(ShapeBundle {
                                 mode: DrawMode::Stroke(StrokeMode::new(
                                     Color::WHITE,
                                     config.connection_size,
@@ -199,16 +200,16 @@ fn create_partial_connection<T: Nodes>(
         if (translation.x - cursor.x).abs() < config.threshold_radius
             && (translation.y - cursor.y).abs() < config.threshold_radius
         {
-            commands
-                .spawn()
-                .insert(PartialConnection {
+            commands.spawn((
+                PartialConnection {
                     input: Some(entity),
                     output: None,
-                })
-                .insert_bundle(ShapeBundle {
+                },
+                ShapeBundle {
                     mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
                     ..default()
-                });
+                },
+            ));
 
             return;
         }
@@ -220,16 +221,16 @@ fn create_partial_connection<T: Nodes>(
         if (translation.x - cursor.x).abs() < config.threshold_radius
             && (translation.y - cursor.y).abs() < config.threshold_radius
         {
-            commands
-                .spawn()
-                .insert(PartialConnection {
+            commands.spawn((
+                PartialConnection {
                     input: None,
                     output: Some(entity),
-                })
-                .insert_bundle(ShapeBundle {
+                },
+                ShapeBundle {
                     mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
                     ..default()
-                });
+                },
+            ));
 
             return;
         }

@@ -18,10 +18,10 @@ pub use crate::{
 pub struct NodePlugins<T: Nodes>(PhantomData<T>);
 
 impl<T: Nodes> PluginGroup for NodePlugins<T> {
-    fn build(&mut self, group: &mut PluginGroupBuilder) {
-        group
+    fn build(self) -> PluginGroupBuilder {
+        PluginGroupBuilder::start::<Self>()
             .add(connection::ConnectionPlugin::<T>::default())
             .add(cursor::CursorPlugin)
-            .add(node::NodePlugin::<T>::default());
+            .add(node::NodePlugin::<T>::default())
     }
 }

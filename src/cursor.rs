@@ -9,7 +9,7 @@ impl Plugin for CursorPlugin {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 pub struct CursorPosition {
     pub x: f32,
     pub y: f32,

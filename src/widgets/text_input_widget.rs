@@ -47,9 +47,9 @@ impl<N: Nodes> Widget<N> for TextInputWidget<N> {
         self.size = area;
 
         commands
-            .spawn_bundle(SpatialBundle::default())
+            .spawn(SpatialBundle::default())
             .with_children(|parent| {
-                parent.spawn_bundle(SpriteBundle {
+                parent.spawn(SpriteBundle {
                     sprite: Sprite {
                         color: Color::WHITE,
                         custom_size: Some(self.size),
@@ -64,7 +64,7 @@ impl<N: Nodes> Widget<N> for TextInputWidget<N> {
                 });
 
                 let text_entity = parent
-                    .spawn_bundle(Text2dBundle {
+                    .spawn(Text2dBundle {
                         text: Text::from_section("", text_style_title),
                         text_2d_bounds: Text2dBounds { size: self.size },
                         transform: Transform::from_xyz(0.0, 0.0, 2.0),

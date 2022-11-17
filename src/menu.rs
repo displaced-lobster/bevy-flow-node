@@ -31,6 +31,7 @@ pub trait NodeMenu: Default + Resource {
 #[derive(Component)]
 struct Menu;
 
+#[derive(Resource)]
 pub struct MenuConfig {
     pub color: Color,
     pub font_size: f32,
@@ -58,6 +59,7 @@ struct MenuOption<T: Nodes + Into<NodeTemplate<T>>> {
     node: T,
 }
 
+#[derive(Resource)]
 struct MenuResources {
     text_style: TextStyle,
 }
@@ -101,7 +103,7 @@ fn open_menu<M: NodeMenu>(
         let height = config.option_height * options.len() as f32;
 
         commands
-            .spawn_bundle(NodeBundle {
+            .spawn(NodeBundle {
                 style: Style {
                     flex_direction: FlexDirection::Column,
                     size: Size::new(Val::Px(config.width), Val::Px(height)),
@@ -118,7 +120,7 @@ fn open_menu<M: NodeMenu>(
             .with_children(|parent| {
                 for option in options.iter() {
                     parent
-                        .spawn_bundle(ButtonBundle {
+                        .spawn(ButtonBundle {
                             style: Style {
                                 size: Size::new(
                                     Val::Px(config.width),
@@ -128,11 +130,11 @@ fn open_menu<M: NodeMenu>(
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
-                            color: config.color.into(),
+                            background_color: config.color.into(),
                             ..default()
                         })
                         .with_children(|parent| {
-                            parent.spawn_bundle(TextBundle::from_section(
+                            parent.spawn(TextBundle::from_section(
                                 option.0.clone(),
                                 res.text_style.clone(),
                             ));
@@ -171,7 +173,7 @@ fn template_from_menu_select<T: Nodes + Into<NodeTemplate<T>>>(
             MenuEvent::Selected(node) => {
                 let template: NodeTemplate<T> = node.clone().into();
 
-                commands.spawn().insert(template);
+                commands.spawn(template);
             }
         }
     }

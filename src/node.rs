@@ -29,7 +29,7 @@ impl<N: Nodes> Plugin for NodePlugin<N> {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct ActiveNode {
     entity: Option<Entity>,
     offset: Vec2,
@@ -75,6 +75,7 @@ impl<T: Nodes> Node<T> {
     }
 }
 
+#[derive(Resource)]
 pub struct NodeConfig {
     pub handle_size_io: f32,
     pub handle_size_title: f32,
@@ -132,6 +133,7 @@ pub enum NodeEvent<N: Nodes> {
     Resolved(N::NodeIO),
 }
 
+#[derive(Resource)]
 struct NodeResources {
     material_handle_input: Handle<ColorMaterial>,
     material_handle_output: Handle<ColorMaterial>,
@@ -288,7 +290,7 @@ fn build_node<T: Nodes>(
 
         commands
             .entity(entity)
-            .insert_bundle(SpriteBundle {
+            .insert(SpriteBundle {
                 sprite: Sprite {
                     color: Color::rgb(0.3, 0.3, 0.3),
                     custom_size: Some(Vec2::new(node_size.x, node_size.y)),
@@ -298,8 +300,8 @@ fn build_node<T: Nodes>(
                 ..default()
             })
             .with_children(|parent| {
-                parent
-                    .spawn_bundle(MaterialMesh2dBundle {
+                parent.spawn((
+                    MaterialMesh2dBundle {
                         material: resources.material_handle_title.clone(),
                         mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle.clone()),
                         transform: Transform::from_xyz(
@@ -308,10 +310,11 @@ fn build_node<T: Nodes>(
                             1.0,
                         ),
                         ..default()
-                    })
-                    .insert(NodeHandle);
+                    },
+                    NodeHandle,
+                ));
 
-                parent.spawn_bundle(Text2dBundle {
+                parent.spawn(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
                     text_2d_bounds: Text2dBounds { size: bounds_title },
                     transform: Transform::from_xyz(
@@ -327,8 +330,8 @@ fn build_node<T: Nodes>(
                 if let Some(label) = &template.output_label {
                     let offset_x = config.padding;
 
-                    parent
-                        .spawn_bundle(MaterialMesh2dBundle {
+                    parent.spawn((
+                        MaterialMesh2dBundle {
                             material: resources.material_handle_output.clone(),
                             mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
                             transform: Transform::from_xyz(
@@ -339,10 +342,11 @@ fn build_node<T: Nodes>(
                                 2.0,
                             ),
                             ..default()
-                        })
-                        .insert(NodeOutput);
+                        },
+                        NodeOutput,
+                    ));
 
-                    parent.spawn_bundle(Text2dBundle {
+                    parent.spawn(Text2dBundle {
                         text: Text::from_section(label.clone(), resources.text_style_body.clone()),
                         text_2d_bounds: Text2dBounds { size: bounds_io },
                         transform: Transform::from_xyz(
@@ -361,20 +365,22 @@ fn build_node<T: Nodes>(
                 if let Some(inputs) = &template.inputs {
                     for io_template in inputs.iter() {
                         parent
-                            .spawn_bundle(SpatialBundle {
-                                transform: Transform::from_xyz(
-                                    offset_x + config.handle_size_io,
-                                    offset_y - config.handle_size_io - config.padding,
-                                    1.0,
-                                ),
-                                ..default()
-                            })
-                            .insert(NodeInput::<T> {
-                                label: io_template.label.clone(),
-                                ..default()
-                            })
+                            .spawn((
+                                SpatialBundle {
+                                    transform: Transform::from_xyz(
+                                        offset_x + config.handle_size_io,
+                                        offset_y - config.handle_size_io - config.padding,
+                                        1.0,
+                                    ),
+                                    ..default()
+                                },
+                                NodeInput::<T> {
+                                    label: io_template.label.clone(),
+                                    ..default()
+                                },
+                            ))
                             .with_children(|parent| {
-                                parent.spawn_bundle(MaterialMesh2dBundle {
+                                parent.spawn(MaterialMesh2dBundle {
                                     material: resources.material_handle_input.clone(),
                                     mesh: bevy::sprite::Mesh2dHandle(
                                         resources.mesh_handle_io.clone(),
@@ -383,7 +389,7 @@ fn build_node<T: Nodes>(
                                 });
                             });
 
-                        parent.spawn_bundle(Text2dBundle {
+                        parent.spawn(Text2dBundle {
                             text: Text::from_section(
                                 io_template.label.clone(),
                                 resources.text_style_body.clone(),
@@ -405,16 +411,17 @@ fn build_node<T: Nodes>(
                     let mut slot = slot;
 
                     slot.width = template.width - 2.0 * config.padding;
-                    parent
-                        .spawn_bundle(SpatialBundle {
+                    parent.spawn((
+                        SpatialBundle {
                             transform: Transform::from_xyz(
                                 offset_x + config.padding,
                                 offset_y,
                                 1.0,
                             ),
                             ..default()
-                        })
-                        .insert(slot);
+                        },
+                        slot,
+                    ));
                 }
             })
             .insert(Node {

@@ -27,16 +27,16 @@ impl Nodes for NoOpNodes {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
-    commands.spawn().insert(NodeTemplate::<NoOpNodes> {
+    commands.spawn(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(-200.0, 0.0),
         title: "Node 1".to_string(),
         output_label: Some("Output".to_string()),
         ..default()
     });
 
-    commands.spawn().insert(NodeTemplate::<NoOpNodes> {
+    commands.spawn(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(200.0, 0.0),
         title: "Node 2".to_string(),
         inputs: Some(vec![NodeIOTemplate {

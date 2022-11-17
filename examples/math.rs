@@ -16,7 +16,7 @@ fn main() {
         .run();
 }
 
-#[derive(Default)]
+#[derive(Default, Resource)]
 struct MathMenu;
 
 impl NodeMenu for MathMenu {
@@ -129,9 +129,9 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn_bundle(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle::default());
 
     let template: NodeTemplate<MathNodes> = MathNodes::Print.into();
 
-    commands.spawn().insert(template);
+    commands.spawn(template);
 }
