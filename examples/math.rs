@@ -25,7 +25,7 @@ struct MathMenu;
 
 impl NodeMenu<MathNodes> for MathMenu {
     fn build(&self, commands: &mut Commands, _asset_server: &Res<AssetServer>, node: &MathNodes) {
-        let template: NodeTemplate<MathNodes> = (*node).into();
+        let template: NodeTemplate<MathNodes> = (*node).clone().into();
 
         let entity = commands.spawn(template).id();
 
@@ -35,11 +35,11 @@ impl NodeMenu<MathNodes> for MathMenu {
                     .entity(entity)
                     .insert(TextInputWidget::<MathNodes> {
                         size: Vec2::new(100.0, 20.0),
-                        value: MathIO(0.0),
+                        value: MathIO::new(0.0),
                         ..default()
                     });
             }
-            MathNodes::Print => {
+            MathNodes::Output => {
                 commands.entity(entity).insert(DisplayWidget {
                     size: Vec2::new(100.0, 20.0),
                     ..default()
@@ -54,46 +54,81 @@ impl NodeMenu<MathNodes> for MathMenu {
             ("Value".to_string(), MathNodes::Value(MathIO::default())),
             ("Add".to_string(), MathNodes::Add),
             ("Multiply".to_string(), MathNodes::Mult),
-            ("Print".to_string(), MathNodes::Print),
+            ("Output".to_string(), MathNodes::Output),
         ]
     }
 }
 
-#[derive(Clone, Copy, Default, Deref)]
-struct MathIO(f32);
+#[derive(Clone, Default)]
+struct MathIO {
+    s_value: String,
+    value: f32,
+}
+
+impl MathIO {
+    fn new(value: f32) -> Self {
+        let s_value = if value != 0.0 {
+            value.to_string()
+        } else {
+            "".to_string()
+        };
+
+        Self { s_value, value }
+    }
+}
 
 impl std::ops::AddAssign<char> for MathIO {
     fn add_assign(&mut self, rhs: char) {
         if rhs.is_digit(10) {
-            self.0 *= 10.0;
-            self.0 += rhs.to_digit(10).unwrap() as f32;
+            self.s_value.push(rhs);
+
+            if let Ok(value) = self.s_value.parse::<f32>() {
+                self.value = value;
+            }
+        } else if rhs == '.' && !self.s_value.chars().any(|c| c == '.') {
+            self.s_value.push(rhs);
+        }
+    }
+}
+
+impl std::ops::SubAssign<char> for MathIO {
+    fn sub_assign(&mut self, _rhs: char) {
+        self.s_value.pop();
+
+        if let Ok(value) = self.s_value.parse() {
+            self.value = value;
+        } else {
+            self.value = 0.0;
         }
     }
 }
 
 impl std::fmt::Display for MathIO {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.s_value)
     }
 }
 
 impl From<f32> for MathIO {
     fn from(f: f32) -> Self {
-        Self(f)
+        Self {
+            value: f,
+            ..default()
+        }
     }
 }
 
 impl Into<String> for MathIO {
     fn into(self) -> String {
-        self.0.to_string()
+        self.to_string()
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 enum MathNodes {
     Add,
     Mult,
-    Print,
+    Output,
     Value(MathIO),
 }
 
@@ -107,26 +142,25 @@ impl Nodes for MathNodes {
     type NodeIO = MathIO;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
-        match *self {
+        match self {
             MathNodes::Add => {
-                let a: f32 = *inputs["a"];
-                let b: f32 = *inputs["b"];
+                let a: f32 = inputs["a"].value;
+                let b: f32 = inputs["b"].value;
 
-                MathIO(a + b)
+                MathIO::new(a + b)
             }
             MathNodes::Mult => {
-                let a: f32 = *inputs["a"];
-                let b: f32 = *inputs["b"];
+                let a: f32 = inputs["a"].value;
+                let b: f32 = inputs["b"].value;
 
-                MathIO(a * b)
+                MathIO::new(a * b)
             }
-            MathNodes::Print => {
-                let value = inputs["value"];
+            MathNodes::Output => {
+                let value = inputs["value"].clone();
 
-                println!("{}", value);
                 value
             }
-            MathNodes::Value(value) => value,
+            MathNodes::Value(value) => value.clone(),
         }
     }
 }
@@ -175,8 +209,8 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
                 output_label: Some("value".to_string()),
                 ..default()
             },
-            Self::Print => NodeTemplate {
-                title: "Print".to_string(),
+            Self::Output => NodeTemplate {
+                title: "Output".to_string(),
                 inputs: Some(vec![NodeIOTemplate {
                     label: "value".to_string(),
                     ..default()
@@ -205,7 +239,7 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
-    let template: NodeTemplate<MathNodes> = MathNodes::Print.into();
+    let template: NodeTemplate<MathNodes> = MathNodes::Output.into();
 
     commands.spawn((
         template,

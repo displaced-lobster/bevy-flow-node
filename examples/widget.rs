@@ -5,7 +5,11 @@ use bevy_node_editor::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
     NodePlugins, NodeSlot, Nodes,
 };
-use std::{collections::HashMap, fmt::Display, ops::AddAssign};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    ops::{AddAssign, SubAssign},
+};
 
 fn main() {
     App::new()
@@ -40,10 +44,7 @@ impl Nodes for IONodes {
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
         match self {
             IONodes::Input(s) => NodeString(s.clone()),
-            IONodes::Output => {
-                println!("Output: {}", inputs["input"]);
-                inputs["input"].clone()
-            }
+            IONodes::Output => inputs["input"].clone(),
         }
     }
 }
@@ -60,6 +61,12 @@ impl ReceiveWidgetValue<IONodes> for IONodes {
 impl AddAssign<char> for NodeString {
     fn add_assign(&mut self, other: char) {
         self.0.push(other);
+    }
+}
+
+impl SubAssign<char> for NodeString {
+    fn sub_assign(&mut self, _other: char) {
+        self.0.pop();
     }
 }
 

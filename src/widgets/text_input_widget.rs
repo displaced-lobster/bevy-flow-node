@@ -1,5 +1,8 @@
 use bevy::{prelude::*, text::Text2dBounds};
-use std::{marker::PhantomData, ops::AddAssign};
+use std::{
+    marker::PhantomData,
+    ops::{AddAssign, SubAssign},
+};
 
 use crate::{
     connection::ConnectionEvent,
@@ -13,7 +16,7 @@ pub struct TextInputWidgetPlugin<N: Nodes>(PhantomData<N>);
 impl<N: Nodes> Plugin for TextInputWidgetPlugin<N>
 where
     N: ReceiveWidgetValue<N>,
-    N::NodeIO: AddAssign<char> + Into<String>,
+    N::NodeIO: AddAssign<char> + Into<String> + SubAssign<char>,
 {
     fn build(&self, app: &mut App) {
         app.add_plugin(WidgetPlugin::<N, TextInputWidget<N>>::default())
@@ -110,13 +113,20 @@ fn text_widget_input<N: Nodes>(
     mut ev_char: EventReader<ReceivedCharacter>,
     mut query: Query<&mut TextInputWidget<N>>,
 ) where
-    N::NodeIO: AddAssign<char>,
+    N::NodeIO: AddAssign<char> + SubAssign<char>,
 {
+    const BACKSPACE: char = '\u{0008}';
+
     for ev in ev_char.iter() {
         for mut widget in query.iter_mut() {
             if widget.active {
                 widget.dirty = true;
-                widget.value += ev.char;
+
+                if ev.char.is_ascii_graphic() {
+                    widget.value += ev.char;
+                } else if ev.char == BACKSPACE {
+                    widget.value -= ev.char;
+                }
             }
         }
     }

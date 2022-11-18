@@ -63,7 +63,6 @@ fn update_display_widget<N: Nodes>(
     for ev in ev_node.iter() {
         #[allow(irrefutable_let_patterns)]
         if let NodeEvent::Resolved(value) = ev {
-            println!("Got event!");
             for entity in q_widget.iter() {
                 for (parent, mut text) in q_text.iter_mut() {
                     if parent.get() == entity {
