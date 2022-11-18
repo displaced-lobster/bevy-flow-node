@@ -97,7 +97,9 @@ impl Default for NodeConfig {
 }
 
 #[derive(Component)]
-struct NodeHandle;
+struct NodeHandle {
+    size: Vec2,
+}
 
 #[derive(Component, Default)]
 pub struct NodeInput<T: Nodes> {
@@ -137,8 +139,6 @@ pub enum NodeEvent<N: Nodes> {
 struct NodeResources {
     material_handle_input: Handle<ColorMaterial>,
     material_handle_output: Handle<ColorMaterial>,
-    material_handle_title: Handle<ColorMaterial>,
-    mesh_handle: Handle<Mesh>,
     mesh_handle_io: Handle<Mesh>,
     text_style_body: TextStyle,
     text_style_title: TextStyle,
@@ -203,23 +203,20 @@ fn setup(
 ) {
     commands.insert_resource(ActiveNode::default());
 
-    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
     let text_style_body = TextStyle {
-        font: font.clone(),
+        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
         font_size: config.font_size_body,
         color: Color::WHITE,
     };
     let text_style_title = TextStyle {
-        font,
+        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
         font_size: config.font_size_title,
         color: Color::WHITE,
     };
 
     commands.insert_resource(NodeResources {
-        material_handle_input: materials.add(Color::YELLOW.into()),
-        material_handle_output: materials.add(Color::RED.into()),
-        material_handle_title: materials.add(Color::PURPLE.into()),
-        mesh_handle: meshes.add(shape::Circle::new(config.handle_size_title).into()),
+        material_handle_input: materials.add(Color::rgb(0.0, 0.992, 0.933).into()),
+        material_handle_output: materials.add(Color::rgb(0.992, 0.475, 0.0).into()),
         mesh_handle_io: meshes.add(shape::Circle::new(config.handle_size_io).into()),
         text_style_body,
         text_style_title,
@@ -228,18 +225,19 @@ fn setup(
 
 fn activate_node(
     mut active_node: ResMut<ActiveNode>,
-    config: Res<NodeConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
-    query: Query<(&Parent, &GlobalTransform), With<NodeHandle>>,
+    query: Query<(&Parent, &NodeHandle, &GlobalTransform)>,
     q_parent: Query<&GlobalTransform>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
-        for (parent, transform) in query.iter() {
-            let translation = transform.translation();
+        for (parent, handle, transform) in query.iter() {
+            let position = transform.translation().truncate() - 0.5 * handle.size;
 
-            if (translation.x - cursor.x).abs() < config.handle_size_title
-                && (translation.y - cursor.y).abs() < config.handle_size_title
+            if cursor.x >= position.x
+                && cursor.x <= position.x + handle.size.x
+                && cursor.y >= position.y
+                && cursor.y <= position.y + handle.size.y
             {
                 let transform = q_parent.get(parent.get()).unwrap();
                 let translation = transform.translation();
@@ -301,26 +299,25 @@ fn build_node<T: Nodes>(
             })
             .with_children(|parent| {
                 parent.spawn((
-                    MaterialMesh2dBundle {
-                        material: resources.material_handle_title.clone(),
-                        mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle.clone()),
-                        transform: Transform::from_xyz(
-                            offset_x + config.handle_size_title,
-                            offset_y - config.handle_size_title,
-                            1.0,
-                        ),
+                    SpriteBundle {
+                        sprite: Sprite {
+                            color: Color::rgb(0.004, 0.431, 0.49),
+                            custom_size: Some(Vec2::new(node_size.x, height_title)),
+                            ..default()
+                        },
+                        transform: Transform::from_xyz(0.0, (node_size.y - height_title) / 2.0, 1.0),
                         ..default()
                     },
-                    NodeHandle,
+                    NodeHandle { size: Vec2::new(template.width, height_title) },
                 ));
 
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
                     text_2d_bounds: Text2dBounds { size: bounds_title },
                     transform: Transform::from_xyz(
-                        offset_x + config.handle_size_title * 2.0 + config.padding,
+                        offset_x,
                         offset_y,
-                        1.0,
+                        2.0,
                     ),
                     ..default()
                 });
