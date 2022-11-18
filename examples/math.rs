@@ -1,7 +1,9 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    NodeMenu, NodeMenuPlugin, NodePlugins, Nodes,
+    widget::ReceiveWidgetValue,
+    widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
+    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSlot, Nodes,
 };
 use std::collections::HashMap;
 
@@ -12,6 +14,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<MathNodes>::default())
         .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
+        .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
+        .add_plugin(TextInputWidgetPlugin::<MathNodes>::default())
         .add_startup_system(setup)
         .run();
 }
@@ -19,16 +23,69 @@ fn main() {
 #[derive(Default, Resource)]
 struct MathMenu;
 
-impl NodeMenu for MathMenu {
-    type Nodes = MathNodes;
+impl NodeMenu<MathNodes> for MathMenu {
+    fn build(&self, commands: &mut Commands, _asset_server: &Res<AssetServer>, node: &MathNodes) {
+        let template: NodeTemplate<MathNodes> = (*node).into();
 
-    fn options(&self) -> Vec<(String, Self::Nodes)> {
+        let entity = commands.spawn(template).id();
+
+        match node {
+            MathNodes::Value(_) => {
+                commands
+                    .entity(entity)
+                    .insert(TextInputWidget::<MathNodes> {
+                        size: Vec2::new(100.0, 20.0),
+                        value: MathIO(0.0),
+                        ..default()
+                    });
+            }
+            MathNodes::Print => {
+                commands.entity(entity).insert(DisplayWidget {
+                    size: Vec2::new(100.0, 20.0),
+                    ..default()
+                });
+            }
+            _ => {}
+        }
+    }
+
+    fn options(&self) -> Vec<(String, MathNodes)> {
         vec![
-            ("Value".to_string(), MathNodes::Value(1.0)),
+            ("Value".to_string(), MathNodes::Value(MathIO::default())),
             ("Add".to_string(), MathNodes::Add),
             ("Multiply".to_string(), MathNodes::Mult),
             ("Print".to_string(), MathNodes::Print),
         ]
+    }
+}
+
+#[derive(Clone, Copy, Default, Deref)]
+struct MathIO(f32);
+
+impl std::ops::AddAssign<char> for MathIO {
+    fn add_assign(&mut self, rhs: char) {
+        if rhs.is_digit(10) {
+            self.0 *= 10.0;
+            self.0 += rhs.to_digit(10).unwrap() as f32;
+        }
+    }
+}
+
+impl std::fmt::Display for MathIO {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<f32> for MathIO {
+    fn from(f: f32) -> Self {
+        Self(f)
+    }
+}
+
+impl Into<String> for MathIO {
+    fn into(self) -> String {
+        self.0.to_string()
     }
 }
 
@@ -37,39 +94,48 @@ enum MathNodes {
     Add,
     Mult,
     Print,
-    Value(f32),
+    Value(MathIO),
 }
 
 impl Default for MathNodes {
     fn default() -> Self {
-        Self::Value(0.0)
+        Self::Value(MathIO::default())
     }
 }
 
 impl Nodes for MathNodes {
-    type NodeIO = f32;
+    type NodeIO = MathIO;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
         match *self {
             MathNodes::Add => {
-                let a: f32 = inputs["a"];
-                let b: f32 = inputs["b"];
+                let a: f32 = *inputs["a"];
+                let b: f32 = *inputs["b"];
 
-                a + b
+                MathIO(a + b)
             }
             MathNodes::Mult => {
-                let a: f32 = inputs["a"];
-                let b: f32 = inputs["b"];
+                let a: f32 = *inputs["a"];
+                let b: f32 = *inputs["b"];
 
-                a * b
+                MathIO(a * b)
             }
             MathNodes::Print => {
                 let value = inputs["value"];
 
-                println!("{:?}", value);
+                println!("{}", value);
                 value
             }
             MathNodes::Value(value) => value,
+        }
+    }
+}
+
+impl ReceiveWidgetValue<MathNodes> for MathNodes {
+    fn receive_value(&mut self, value: MathIO) {
+        match self {
+            MathNodes::Value(io) => *io = value,
+            _ => {}
         }
     }
 }
@@ -113,16 +179,24 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
                 title: "Print".to_string(),
                 inputs: Some(vec![NodeIOTemplate {
                     label: "value".to_string(),
-                    ..Default::default()
+                    ..default()
                 }]),
                 node: self,
+                slot: Some(NodeSlot {
+                    height: 20.0,
+                    ..default()
+                }),
                 ..default()
             },
-            Self::Value(value) => NodeTemplate {
+            Self::Value(_) => NodeTemplate {
                 title: "Value".to_string(),
-                output_label: Some(format!("{}", value)),
+                output_label: Some("value".to_string()),
                 node: self,
-                ..Default::default()
+                slot: Some(NodeSlot {
+                    height: 20.0,
+                    ..default()
+                }),
+                ..default()
             },
         }
     }
@@ -133,5 +207,11 @@ fn setup(mut commands: Commands) {
 
     let template: NodeTemplate<MathNodes> = MathNodes::Print.into();
 
-    commands.spawn(template);
+    commands.spawn((
+        template,
+        DisplayWidget {
+            size: Vec2::new(100.0, 20.0),
+            ..default()
+        },
+    ));
 }

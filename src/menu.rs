@@ -1,31 +1,27 @@
 use bevy::{ecs::system::Resource, prelude::*};
 use std::marker::PhantomData;
 
-use crate::{
-    cursor::CursorPosition,
-    node::{NodeTemplate, Nodes},
-};
+use crate::{cursor::CursorPosition, node::Nodes};
 
 #[derive(Default)]
-pub struct NodeMenuPlugin<M: NodeMenu, T: Nodes + Into<NodeTemplate<T>>>(PhantomData<(M, T)>);
+pub struct NodeMenuPlugin<M: NodeMenu<N>, N: Nodes>(PhantomData<(M, N)>);
 
-impl<M: NodeMenu, T: Nodes + Into<NodeTemplate<T>>> Plugin for NodeMenuPlugin<M, T> {
+impl<M: NodeMenu<N>, N: Nodes> Plugin for NodeMenuPlugin<M, N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(M::default())
             .insert_resource(MenuConfig::default())
-            .add_event::<MenuEvent<T>>()
+            .add_event::<MenuEvent<N>>()
             .add_startup_system(setup)
-            .add_system(select_menu_option::<T>.before(close_menu))
+            .add_system(select_menu_option::<N>.before(close_menu))
             .add_system(close_menu)
-            .add_system(open_menu::<M>)
-            .add_system(template_from_menu_select::<T>);
+            .add_system(open_menu::<M, N>)
+            .add_system(build_from_menu_select::<M, N>);
     }
 }
 
-pub trait NodeMenu: Default + Resource {
-    type Nodes: Nodes + Into<NodeTemplate<Self::Nodes>>;
-
-    fn options(&self) -> Vec<(String, Self::Nodes)>;
+pub trait NodeMenu<N: Nodes>: Default + Resource {
+    fn build(&self, commands: &mut Commands, asset_server: &Res<AssetServer>, node: &N);
+    fn options(&self) -> Vec<(String, N)>;
 }
 
 #[derive(Component)]
@@ -50,13 +46,13 @@ impl Default for MenuConfig {
     }
 }
 
-enum MenuEvent<T: Nodes + Into<NodeTemplate<T>>> {
-    Selected(T),
+enum MenuEvent<N: Nodes> {
+    Selected(N),
 }
 
 #[derive(Component)]
-struct MenuOption<T: Nodes + Into<NodeTemplate<T>>> {
-    node: T,
+struct MenuOption<N: Nodes> {
+    node: N,
 }
 
 #[derive(Resource)]
@@ -90,7 +86,7 @@ fn close_menu(
     }
 }
 
-fn open_menu<M: NodeMenu>(
+fn open_menu<M: NodeMenu<N>, N: Nodes>(
     mut commands: Commands,
     config: Res<MenuConfig>,
     cursor: Res<CursorPosition>,
@@ -148,10 +144,10 @@ fn open_menu<M: NodeMenu>(
     }
 }
 
-fn select_menu_option<T: Nodes + Into<NodeTemplate<T>>>(
+fn select_menu_option<N: Nodes>(
     mut commands: Commands,
-    mut events: EventWriter<MenuEvent<T>>,
-    q_options: Query<(Entity, &MenuOption<T>, &Interaction), (Changed<Interaction>, With<Button>)>,
+    mut events: EventWriter<MenuEvent<N>>,
+    q_options: Query<(Entity, &MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
     for (entity, option, interaction) in q_options.iter() {
         match interaction {
@@ -164,16 +160,16 @@ fn select_menu_option<T: Nodes + Into<NodeTemplate<T>>>(
     }
 }
 
-fn template_from_menu_select<T: Nodes + Into<NodeTemplate<T>>>(
+fn build_from_menu_select<M: NodeMenu<N>, N: Nodes>(
     mut commands: Commands,
-    mut events: EventReader<MenuEvent<T>>,
+    assert_server: Res<AssetServer>,
+    menu: Res<M>,
+    mut events: EventReader<MenuEvent<N>>,
 ) {
     for event in events.iter() {
         match event {
             MenuEvent::Selected(node) => {
-                let template: NodeTemplate<T> = node.clone().into();
-
-                commands.spawn(template);
+                menu.build(&mut commands, &assert_server, &node);
             }
         }
     }

@@ -1,9 +1,9 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    widget::{ReceiveWidgetValue, Widget, WidgetPlugin},
-    widgets::{TextInputWidget, TextInputWidgetPlugin},
-    NodeEvent, NodePlugins, NodeSlot, Nodes,
+    widget::ReceiveWidgetValue,
+    widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
+    NodePlugins, NodeSlot, Nodes,
 };
 use std::{collections::HashMap, fmt::Display, ops::AddAssign};
 
@@ -13,10 +13,9 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<IONodes>::default())
+        .add_plugin(DisplayWidgetPlugin::<IONodes>::default())
         .add_plugin(TextInputWidgetPlugin::<IONodes>::default())
-        .add_plugin(WidgetPlugin::<IONodes, DisplayWidget>::default())
         .add_startup_system(setup)
-        .add_system(update_display_widget)
         .run();
 }
 
@@ -76,40 +75,6 @@ impl Into<String> for NodeString {
     }
 }
 
-#[derive(Component, Clone, Copy, Default)]
-struct DisplayWidget {
-    size: Vec2,
-}
-
-impl Widget<IONodes> for DisplayWidget {
-    fn build(
-        &mut self,
-        commands: &mut Commands,
-        area: Vec2,
-        asset_server: &Res<AssetServer>,
-    ) -> Entity {
-        let text_style_title = TextStyle {
-            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-            font_size: 16.0,
-            color: Color::WHITE,
-        };
-
-        self.size = area;
-
-        commands
-            .spawn(Text2dBundle {
-                text: Text::from_section("Hello World", text_style_title),
-                transform: Transform::from_xyz(0.0, 0.0, 2.0),
-                ..default()
-            })
-            .id()
-    }
-
-    fn size(&self) -> Vec2 {
-        self.size
-    }
-}
-
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
 
@@ -153,22 +118,4 @@ fn setup(mut commands: Commands) {
         },
         DisplayWidget::default(),
     ));
-}
-
-fn update_display_widget(
-    mut ev_node: EventReader<NodeEvent<IONodes>>,
-    mut q_text: Query<(&Parent, &mut Text)>,
-    q_widget: Query<Entity, With<DisplayWidget>>,
-) {
-    for ev in ev_node.iter() {
-        if let NodeEvent::Resolved(value) = ev {
-            for entity in q_widget.iter() {
-                for (parent, mut text) in q_text.iter_mut() {
-                    if parent.get() == entity {
-                        text.sections[0].value = value.to_string();
-                    }
-                }
-            }
-        }
-    }
 }
