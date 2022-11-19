@@ -136,12 +136,13 @@ pub enum NodeEvent<N: Nodes> {
 }
 
 #[derive(Resource)]
-struct NodeResources {
-    material_handle_input: Handle<ColorMaterial>,
-    material_handle_output: Handle<ColorMaterial>,
-    mesh_handle_io: Handle<Mesh>,
-    text_style_body: TextStyle,
-    text_style_title: TextStyle,
+pub(crate) struct NodeResources {
+    pub material_handle_input: Handle<ColorMaterial>,
+    pub material_handle_input_inactive: Handle<ColorMaterial>,
+    pub material_handle_output: Handle<ColorMaterial>,
+    pub mesh_handle_io: Handle<Mesh>,
+    pub text_style_body: TextStyle,
+    pub text_style_title: TextStyle,
 }
 
 #[derive(Component, Clone, Copy, Default)]
@@ -216,6 +217,7 @@ fn setup(
 
     commands.insert_resource(NodeResources {
         material_handle_input: materials.add(Color::rgb(0.0, 0.992, 0.933).into()),
+        material_handle_input_inactive: materials.add(Color::rgb(0.541, 0.624, 0.62).into()),
         material_handle_output: materials.add(Color::rgb(0.992, 0.475, 0.0).into()),
         mesh_handle_io: meshes.add(shape::Circle::new(config.handle_size_io).into()),
         text_style_body,
@@ -305,20 +307,22 @@ fn build_node<T: Nodes>(
                             custom_size: Some(Vec2::new(node_size.x, height_title)),
                             ..default()
                         },
-                        transform: Transform::from_xyz(0.0, (node_size.y - height_title) / 2.0, 1.0),
+                        transform: Transform::from_xyz(
+                            0.0,
+                            (node_size.y - height_title) / 2.0,
+                            1.0,
+                        ),
                         ..default()
                     },
-                    NodeHandle { size: Vec2::new(template.width, height_title) },
+                    NodeHandle {
+                        size: Vec2::new(template.width, height_title),
+                    },
                 ));
 
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
                     text_2d_bounds: Text2dBounds { size: bounds_title },
-                    transform: Transform::from_xyz(
-                        offset_x,
-                        offset_y,
-                        2.0,
-                    ),
+                    transform: Transform::from_xyz(offset_x, offset_y, 2.0),
                     ..default()
                 });
 
@@ -378,7 +382,7 @@ fn build_node<T: Nodes>(
                             ))
                             .with_children(|parent| {
                                 parent.spawn(MaterialMesh2dBundle {
-                                    material: resources.material_handle_input.clone(),
+                                    material: resources.material_handle_input_inactive.clone(),
                                     mesh: bevy::sprite::Mesh2dHandle(
                                         resources.mesh_handle_io.clone(),
                                     ),

@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
-    node::{NodeInput, NodeOutput, Nodes},
+    node::{NodeInput, NodeOutput, NodeResources, Nodes},
 };
 
 #[derive(Default)]
@@ -57,9 +57,11 @@ fn break_connection<N: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
+    node_res: Res<NodeResources>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     mut q_inputs: Query<(Entity, &mut NodeInput<N>, &GlobalTransform)>,
+    mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     if !mouse_button_input.just_pressed(MouseButton::Left) {
         return;
@@ -91,6 +93,12 @@ fn break_connection<N: Nodes>(
                 .insert(DrawMode::Stroke(StrokeMode::new(Color::BLACK, 0.0)));
             node_input.connection = None;
             ev_connection.send(ConnectionEvent::Destroyed);
+
+            for (parent, mut material) in q_material.iter_mut() {
+                if parent.get() == entity {
+                    *material = node_res.material_handle_input_inactive.clone();
+                }
+            }
 
             return;
         }
@@ -142,10 +150,12 @@ fn complete_partial_connection<T: Nodes>(
 fn convert_partial_connection<N: Nodes>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
+    node_res: Res<NodeResources>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
     q_outputs: Query<&Parent, With<NodeOutput>>,
     mut q_inputs: Query<(Entity, &Parent, &mut NodeInput<N>, &Transform)>,
+    mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {
@@ -167,6 +177,12 @@ fn convert_partial_connection<N: Nodes>(
                             });
 
                             ev_connection.send(ConnectionEvent::Created);
+
+                            for (parent, mut material) in q_material.iter_mut() {
+                                if parent.get() == input_entity {
+                                    *material = node_res.material_handle_input.clone();
+                                }
+                            }
                         }
                     }
 
