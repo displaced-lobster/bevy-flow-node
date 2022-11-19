@@ -336,9 +336,7 @@ fn build_node<N: NodeSet>(
                             material: resources.material_handle_output.clone(),
                             mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
                             transform: Transform::from_xyz(
-                                offset_x + node_size.x / 2.0
-                                    - 2.0 * config.handle_size_io
-                                    - config.padding,
+                                offset_x + node_size.x / 2.0 - config.handle_size_io,
                                 offset_y - config.handle_size_io - config.padding,
                                 2.0,
                             ),
@@ -369,7 +367,7 @@ fn build_node<N: NodeSet>(
                             .spawn((
                                 SpatialBundle {
                                     transform: Transform::from_xyz(
-                                        offset_x + config.handle_size_io,
+                                        offset_x - config.handle_size_io,
                                         offset_y - config.handle_size_io - config.padding,
                                         1.0,
                                     ),
@@ -397,7 +395,7 @@ fn build_node<N: NodeSet>(
                             ),
                             text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
-                                offset_x + 2.0 * config.handle_size_io + config.padding,
+                                offset_x + config.padding,
                                 offset_y - config.font_size_body + config.handle_size_io * 2.0,
                                 1.0,
                             ),
