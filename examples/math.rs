@@ -3,7 +3,7 @@ use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSlot, Nodes,
+    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot,
 };
 use std::collections::HashMap;
 
@@ -138,7 +138,7 @@ impl Default for MathNodes {
     }
 }
 
-impl Nodes for MathNodes {
+impl NodeSet for MathNodes {
     type NodeIO = MathIO;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {

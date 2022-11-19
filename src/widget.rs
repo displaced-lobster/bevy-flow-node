@@ -3,10 +3,10 @@ use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
-    node::{NodeSlot, Nodes},
+    node::{NodeSet, NodeSlot},
 };
 
-pub trait Widget<N: Nodes>: Clone + Component {
+pub trait Widget<N: NodeSet>: Clone + Component {
     fn blur(&mut self) {}
     fn build(
         &mut self,
@@ -26,14 +26,14 @@ pub trait Widget<N: Nodes>: Clone + Component {
     fn set_value(&mut self, _value: N::NodeIO) {}
 }
 
-pub trait ReceiveWidgetValue<N: Nodes> {
+pub trait ReceiveWidgetValue<N: NodeSet> {
     fn receive_value(&mut self, value: N::NodeIO);
 }
 
 #[derive(Default)]
-pub struct WidgetPlugin<N: Nodes, W: Widget<N>>(PhantomData<(N, W)>);
+pub struct WidgetPlugin<N: NodeSet, W: Widget<N>>(PhantomData<(N, W)>);
 
-impl<N: Nodes, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
+impl<N: NodeSet, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveWidget::default())
             .add_system(focus_widget::<N, W>)
@@ -48,7 +48,7 @@ struct ActiveWidget {
     entity: Option<Entity>,
 }
 
-fn focus_widget<N: Nodes, W: Widget<N>>(
+fn focus_widget<N: NodeSet, W: Widget<N>>(
     cursor: Res<CursorPosition>,
     mouse_button: Res<Input<MouseButton>>,
     mut active_widget: ResMut<ActiveWidget>,
@@ -74,7 +74,7 @@ fn focus_widget<N: Nodes, W: Widget<N>>(
     }
 }
 
-fn build_widget<N: Nodes, W: Widget<N>>(
+fn build_widget<N: NodeSet, W: Widget<N>>(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut q_widget: Query<(Entity, &mut W, &NodeSlot)>,
@@ -93,7 +93,7 @@ fn build_widget<N: Nodes, W: Widget<N>>(
     }
 }
 
-fn blur_widget<N: Nodes, W: Widget<N>>(
+fn blur_widget<N: NodeSet, W: Widget<N>>(
     cursor: Res<CursorPosition>,
     mouse_button: Res<Input<MouseButton>>,
     mut active_widget: ResMut<ActiveWidget>,
@@ -119,7 +119,7 @@ fn blur_widget<N: Nodes, W: Widget<N>>(
     }
 }
 
-fn slot_widget<N: Nodes, W: Widget<N>>(
+fn slot_widget<N: NodeSet, W: Widget<N>>(
     mut commands: Commands,
     q_widget: Query<(Entity, &W), Without<NodeSlot>>,
     q_slot: Query<(Entity, &Parent), With<NodeSlot>>,

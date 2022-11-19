@@ -6,23 +6,23 @@ use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
-    node::{NodeInput, NodeOutput, NodeResources, Nodes},
+    node::{NodeInput, NodeOutput, NodeResources, NodeSet},
 };
 
 #[derive(Default)]
-pub struct ConnectionPlugin<T: Nodes>(PhantomData<T>);
+pub struct ConnectionPlugin<N: NodeSet>(PhantomData<N>);
 
-impl<T: Nodes> Plugin for ConnectionPlugin<T> {
+impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
-            .add_system(break_connection::<T>)
-            .add_system(draw_connections::<T>)
-            .add_system(draw_partial_connections::<T>)
-            .add_system(complete_partial_connection::<T>)
-            .add_system(convert_partial_connection::<T>)
-            .add_system(create_partial_connection::<T>);
+            .add_system(break_connection::<N>)
+            .add_system(draw_connections::<N>)
+            .add_system(draw_partial_connections::<N>)
+            .add_system(complete_partial_connection::<N>)
+            .add_system(convert_partial_connection::<N>)
+            .add_system(create_partial_connection::<N>);
     }
 }
 
@@ -53,7 +53,7 @@ struct PartialConnection {
     output: Option<Entity>,
 }
 
-fn break_connection<N: Nodes>(
+fn break_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
@@ -105,7 +105,7 @@ fn break_connection<N: Nodes>(
     }
 }
 
-fn complete_partial_connection<T: Nodes>(
+fn complete_partial_connection<T: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
@@ -147,7 +147,7 @@ fn complete_partial_connection<T: Nodes>(
     }
 }
 
-fn convert_partial_connection<N: Nodes>(
+fn convert_partial_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     node_res: Res<NodeResources>,
@@ -193,13 +193,13 @@ fn convert_partial_connection<N: Nodes>(
     }
 }
 
-fn create_partial_connection<T: Nodes>(
+fn create_partial_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<(Entity, &NodeInput<T>, &GlobalTransform)>,
+    q_input: Query<(Entity, &NodeInput<N>, &GlobalTransform)>,
     q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
 ) {
     if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left) {
@@ -253,8 +253,8 @@ fn create_partial_connection<T: Nodes>(
     }
 }
 
-fn draw_connections<T: Nodes>(
-    mut q_input: Query<(&NodeInput<T>, &GlobalTransform, &mut Path)>,
+fn draw_connections<N: NodeSet>(
+    mut q_input: Query<(&NodeInput<N>, &GlobalTransform, &mut Path)>,
     q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
     for (input, input_transform, mut path) in q_input.iter_mut() {
@@ -275,11 +275,11 @@ fn draw_connections<T: Nodes>(
     }
 }
 
-fn draw_partial_connections<T: Nodes>(
+fn draw_partial_connections<N: NodeSet>(
     mut commands: Commands,
     cursor: Res<CursorPosition>,
     mut q_connections: Query<(Entity, &PartialConnection, &mut Path)>,
-    q_start: Query<&GlobalTransform, Or<(With<NodeInput<T>>, With<NodeOutput>)>>,
+    q_start: Query<&GlobalTransform, Or<(With<NodeInput<N>>, With<NodeOutput>)>>,
 ) {
     for (entity, connection, mut path) in q_connections.iter_mut() {
         let connection_entity = if connection.input.is_some() {

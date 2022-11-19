@@ -2,14 +2,14 @@ use bevy::prelude::*;
 use std::{fmt::Display, marker::PhantomData};
 
 use crate::{
-    node::{NodeEvent, Nodes},
+    node::{NodeEvent, NodeSet},
     widget::{Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct DisplayWidgetPlugin<N: Nodes>(PhantomData<N>);
+pub struct DisplayWidgetPlugin<N: NodeSet>(PhantomData<N>);
 
-impl<N: Nodes> Plugin for DisplayWidgetPlugin<N>
+impl<N: NodeSet> Plugin for DisplayWidgetPlugin<N>
 where
     N::NodeIO: Display,
 {
@@ -24,7 +24,7 @@ pub struct DisplayWidget {
     pub size: Vec2,
 }
 
-impl<N: Nodes> Widget<N> for DisplayWidget {
+impl<N: NodeSet> Widget<N> for DisplayWidget {
     fn build(
         &mut self,
         commands: &mut Commands,
@@ -53,7 +53,7 @@ impl<N: Nodes> Widget<N> for DisplayWidget {
     }
 }
 
-fn update_display_widget<N: Nodes>(
+fn update_display_widget<N: NodeSet>(
     mut ev_node: EventReader<NodeEvent<N>>,
     mut q_text: Query<(&Parent, &mut Text)>,
     q_widget: Query<Entity, With<DisplayWidget>>,

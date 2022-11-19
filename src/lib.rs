@@ -10,18 +10,18 @@ pub mod widgets;
 
 pub use crate::{
     menu::{NodeMenu, NodeMenuPlugin},
-    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSlot, Nodes, OutputNode},
+    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet, NodeSlot, OutputNode},
     widget::{Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct NodePlugins<T: Nodes>(PhantomData<T>);
+pub struct NodePlugins<N: NodeSet>(PhantomData<N>);
 
-impl<T: Nodes> PluginGroup for NodePlugins<T> {
+impl<N: NodeSet> PluginGroup for NodePlugins<N> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
-            .add(connection::ConnectionPlugin::<T>::default())
+            .add(connection::ConnectionPlugin::<N>::default())
             .add(cursor::CursorPlugin)
-            .add(node::NodePlugin::<T>::default())
+            .add(node::NodePlugin::<N>::default())
     }
 }

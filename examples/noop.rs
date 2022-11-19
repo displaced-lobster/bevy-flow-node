@@ -2,7 +2,7 @@ use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    NodePlugins, Nodes,
+    NodePlugins, NodeSet,
 };
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
 #[derive(Clone, Copy, Default)]
 struct NoOpNodes;
 
-impl Nodes for NoOpNodes {
+impl NodeSet for NoOpNodes {
     type NodeIO = ();
 
     fn resolve(&self, _inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {

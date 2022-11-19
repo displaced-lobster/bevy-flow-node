@@ -3,7 +3,7 @@ use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodePlugins, NodeSlot, Nodes,
+    NodePlugins, NodeSet, NodeSlot,
 };
 use std::{
     collections::HashMap,
@@ -38,7 +38,7 @@ impl Default for IONodes {
     }
 }
 
-impl Nodes for IONodes {
+impl NodeSet for IONodes {
     type NodeIO = NodeString;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {

@@ -3,21 +3,21 @@ use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
 
-pub trait Nodes: 'static + Clone + Default + Sized + Send + Sync {
+pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO;
 }
 
-pub struct NodePlugin<T: Nodes>(PhantomData<T>);
+pub struct NodePlugin<N: NodeSet>(PhantomData<N>);
 
-impl<T: Nodes> Default for NodePlugin<T> {
+impl<N: NodeSet> Default for NodePlugin<N> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<N: Nodes> Plugin for NodePlugin<N> {
+impl<N: NodeSet> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
             .add_event::<NodeEvent<N>>()
@@ -36,18 +36,18 @@ struct ActiveNode {
 }
 
 #[derive(Component, Default)]
-pub struct Node<T: Nodes> {
-    pub node: T,
+pub struct Node<N: NodeSet> {
+    pub node: N,
 }
 
-impl<T: Nodes> Node<T> {
+impl<N: NodeSet> Node<N> {
     pub fn get_inputs(
         &self,
         entity: Entity,
-        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
+        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> HashMap<String, T::NodeIO> {
+    ) -> HashMap<String, N::NodeIO> {
         let mut inputs = HashMap::new();
 
         for (parent, input) in q_inputs.iter() {
@@ -65,10 +65,10 @@ impl<T: Nodes> Node<T> {
     pub fn resolve(
         &self,
         entity: Entity,
-        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
+        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> T::NodeIO {
+    ) -> N::NodeIO {
         let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
         self.node.resolve(&inputs)
@@ -102,20 +102,20 @@ struct NodeHandle {
 }
 
 #[derive(Component, Default)]
-pub struct NodeInput<T: Nodes> {
+pub struct NodeInput<N: NodeSet> {
     pub connection: Option<Entity>,
-    pub default: T::NodeIO,
+    pub default: N::NodeIO,
     pub label: String,
-    _phantom: PhantomData<T>,
+    _phantom: PhantomData<N>,
 }
 
-impl<T: Nodes> NodeInput<T> {
+impl<N: NodeSet> NodeInput<N> {
     pub fn get_input(
         &self,
-        q_nodes: &Query<(Entity, &Node<T>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<T>)>,
+        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> T::NodeIO {
+    ) -> N::NodeIO {
         if let Some(connection) = self.connection {
             if let Ok((parent, _output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
@@ -131,7 +131,7 @@ impl<T: Nodes> NodeInput<T> {
 #[derive(Component)]
 pub struct NodeOutput;
 
-pub enum NodeEvent<N: Nodes> {
+pub enum NodeEvent<N: NodeSet> {
     Resolved(N::NodeIO),
 }
 
@@ -164,11 +164,11 @@ impl Default for NodeIOTemplate {
 }
 
 #[derive(Component)]
-pub struct NodeTemplate<T: Nodes> {
+pub struct NodeTemplate<N: NodeSet> {
     pub activate: bool,
     pub height: f32,
     pub inputs: Option<Vec<NodeIOTemplate>>,
-    pub node: T,
+    pub node: N,
     pub output_label: Option<String>,
     pub position: Vec2,
     pub slot: Option<NodeSlot>,
@@ -176,13 +176,13 @@ pub struct NodeTemplate<T: Nodes> {
     pub width: f32,
 }
 
-impl<T: Nodes> Default for NodeTemplate<T> {
+impl<N: NodeSet> Default for NodeTemplate<N> {
     fn default() -> Self {
         Self {
             activate: false,
             height: 0.0,
             inputs: None,
-            node: T::default(),
+            node: N::default(),
             position: Vec2::ZERO,
             output_label: None,
             slot: None,
@@ -257,12 +257,12 @@ fn activate_node(
     }
 }
 
-fn build_node<T: Nodes>(
+fn build_node<N: NodeSet>(
     mut commands: Commands,
     config: Res<NodeConfig>,
     resources: Res<NodeResources>,
     mut active_node: ResMut<ActiveNode>,
-    query: Query<(Entity, &NodeTemplate<T>)>,
+    query: Query<(Entity, &NodeTemplate<N>)>,
 ) {
     for (entity, template) in query.iter() {
         let n_io = if let Some(inputs) = &template.inputs {
@@ -375,7 +375,7 @@ fn build_node<T: Nodes>(
                                     ),
                                     ..default()
                                 },
-                                NodeInput::<T> {
+                                NodeInput::<N> {
                                     label: io_template.label.clone(),
                                     ..default()
                                 },
@@ -428,7 +428,7 @@ fn build_node<T: Nodes>(
             .insert(Node {
                 node: template.node.clone(),
             })
-            .remove::<NodeTemplate<T>>();
+            .remove::<NodeTemplate<N>>();
 
         if output {
             commands.entity(entity).insert(OutputNode);
@@ -441,10 +441,10 @@ fn build_node<T: Nodes>(
     }
 }
 
-fn drag_node<T: Nodes>(
+fn drag_node<N: NodeSet>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
-    mut query: Query<&mut Transform, With<Node<T>>>,
+    mut query: Query<&mut Transform, With<Node<N>>>,
 ) {
     if let Some(entity) = active_node.entity {
         if let Ok(mut transform) = query.get_mut(entity) {
@@ -454,7 +454,7 @@ fn drag_node<T: Nodes>(
     }
 }
 
-fn resolve_output_nodes<N: Nodes>(
+fn resolve_output_nodes<N: NodeSet>(
     mut ev_resolution: EventWriter<NodeEvent<N>>,
     mut ev_connection: EventReader<ConnectionEvent>,
     q_output: Query<(Entity, &Node<N>), With<OutputNode>>,

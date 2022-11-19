@@ -6,14 +6,14 @@ use std::{
 
 use crate::{
     connection::ConnectionEvent,
-    node::{Node, Nodes},
+    node::{Node, NodeSet},
     widget::{ReceiveWidgetValue, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct TextInputWidgetPlugin<N: Nodes>(PhantomData<N>);
+pub struct TextInputWidgetPlugin<N: NodeSet>(PhantomData<N>);
 
-impl<N: Nodes> Plugin for TextInputWidgetPlugin<N>
+impl<N: NodeSet> Plugin for TextInputWidgetPlugin<N>
 where
     N: ReceiveWidgetValue<N>,
     N::NodeIO: AddAssign<char> + Into<String> + SubAssign<char>,
@@ -26,7 +26,7 @@ where
 }
 
 #[derive(Clone, Component, Default)]
-pub struct TextInputWidget<N: Nodes> {
+pub struct TextInputWidget<N: NodeSet> {
     pub active: bool,
     pub dirty: bool,
     pub size: Vec2,
@@ -34,7 +34,7 @@ pub struct TextInputWidget<N: Nodes> {
     pub value: N::NodeIO,
 }
 
-impl<N: Nodes> Widget<N> for TextInputWidget<N> {
+impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
     fn build(
         &mut self,
         commands: &mut Commands,
@@ -109,7 +109,7 @@ impl<N: Nodes> Widget<N> for TextInputWidget<N> {
     }
 }
 
-fn text_widget_input<N: Nodes>(
+fn text_widget_input<N: NodeSet>(
     mut ev_char: EventReader<ReceivedCharacter>,
     mut query: Query<&mut TextInputWidget<N>>,
 ) where
@@ -132,7 +132,7 @@ fn text_widget_input<N: Nodes>(
     }
 }
 
-fn text_widget_value<N: Nodes>(
+fn text_widget_value<N: NodeSet>(
     mut ev_conn: EventWriter<ConnectionEvent>,
     mut q_node: Query<&mut Node<N>>,
     mut q_widget: Query<(&Parent, &mut TextInputWidget<N>)>,

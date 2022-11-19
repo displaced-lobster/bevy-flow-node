@@ -1,12 +1,12 @@
 use bevy::{ecs::system::Resource, prelude::*};
 use std::marker::PhantomData;
 
-use crate::{cursor::CursorPosition, node::Nodes};
+use crate::{cursor::CursorPosition, node::NodeSet};
 
 #[derive(Default)]
-pub struct NodeMenuPlugin<M: NodeMenu<N>, N: Nodes>(PhantomData<(M, N)>);
+pub struct NodeMenuPlugin<M: NodeMenu<N>, N: NodeSet>(PhantomData<(M, N)>);
 
-impl<M: NodeMenu<N>, N: Nodes> Plugin for NodeMenuPlugin<M, N> {
+impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(M::default())
             .insert_resource(MenuConfig::default())
@@ -19,7 +19,7 @@ impl<M: NodeMenu<N>, N: Nodes> Plugin for NodeMenuPlugin<M, N> {
     }
 }
 
-pub trait NodeMenu<N: Nodes>: Default + Resource {
+pub trait NodeMenu<N: NodeSet>: Default + Resource {
     fn build(&self, commands: &mut Commands, asset_server: &Res<AssetServer>, node: &N);
     fn options(&self) -> Vec<(String, N)>;
 }
@@ -46,12 +46,12 @@ impl Default for MenuConfig {
     }
 }
 
-enum MenuEvent<N: Nodes> {
+enum MenuEvent<N: NodeSet> {
     Selected(N),
 }
 
 #[derive(Component)]
-struct MenuOption<N: Nodes> {
+struct MenuOption<N: NodeSet> {
     node: N,
 }
 
@@ -86,7 +86,7 @@ fn close_menu(
     }
 }
 
-fn open_menu<M: NodeMenu<N>, N: Nodes>(
+fn open_menu<M: NodeMenu<N>, N: NodeSet>(
     mut commands: Commands,
     config: Res<MenuConfig>,
     cursor: Res<CursorPosition>,
@@ -144,7 +144,7 @@ fn open_menu<M: NodeMenu<N>, N: Nodes>(
     }
 }
 
-fn select_menu_option<N: Nodes>(
+fn select_menu_option<N: NodeSet>(
     mut commands: Commands,
     mut events: EventWriter<MenuEvent<N>>,
     q_options: Query<(Entity, &MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
@@ -160,7 +160,7 @@ fn select_menu_option<N: Nodes>(
     }
 }
 
-fn build_from_menu_select<M: NodeMenu<N>, N: Nodes>(
+fn build_from_menu_select<M: NodeMenu<N>, N: NodeSet>(
     mut commands: Commands,
     assert_server: Res<AssetServer>,
     menu: Res<M>,
