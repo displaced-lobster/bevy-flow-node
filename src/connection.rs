@@ -263,9 +263,13 @@ fn draw_connections<N: NodeSet>(
                 let mut path_builder = PathBuilder::new();
                 let input_position = input_transform.translation().truncate();
                 let output_position = output_transform.translation().truncate();
+                let end = output_position - input_position;
+                let half_x = end.x / 2.0;
+                let ctrl_1 = Vec2::new(half_x, 0.0);
+                let ctrl_2 = Vec2::new(half_x, end.y);
 
                 path_builder.move_to(Vec2::ZERO);
-                path_builder.line_to(output_position - input_position);
+                path_builder.cubic_bezier_to(ctrl_1, ctrl_2, end);
 
                 let line = path_builder.build();
 
@@ -291,12 +295,17 @@ fn draw_partial_connections<N: NodeSet>(
         if let Some(connection_entity) = connection_entity {
             if let Ok(transform) = q_start.get(connection_entity) {
                 let mut path_builder = PathBuilder::new();
+                let start = transform.translation().truncate();
+                let end = cursor.position();
+                let half_x = (end.x - start.x) / 2.0;
+                let ctrl_1 = Vec2::new(start.x + half_x, start.y);
+                let ctrl_2 = Vec2::new(start.x + half_x, end.y);
 
                 path_builder.move_to(Vec2::new(
                     transform.translation().x,
                     transform.translation().y,
                 ));
-                path_builder.line_to(cursor.position());
+                path_builder.cubic_bezier_to(ctrl_1, ctrl_2, end);
 
                 let line = path_builder.build();
 
