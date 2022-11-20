@@ -1,4 +1,10 @@
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle, text::Text2dBounds};
+use bevy::{
+    prelude::*,
+    reflect::TypeUuid,
+    render::render_resource::{AsBindGroup, ShaderRef},
+    sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
+    text::Text2dBounds,
+};
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{connection::ConnectionEvent, cursor::CursorPosition};
@@ -21,6 +27,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(NodeConfig::default())
             .add_event::<NodeEvent<N>>()
+            .add_plugin(Material2dPlugin::<NodeMaterial>::default())
             .add_startup_system(setup)
             .add_system(activate_node)
             .add_system(build_node::<N>)
@@ -77,6 +84,10 @@ impl<N: NodeSet> Node<N> {
 
 #[derive(Resource)]
 pub struct NodeConfig {
+    pub border_thickness: f32,
+    pub color_border: Color,
+    pub color_node: Color,
+    pub color_title: Color,
     pub handle_size_io: f32,
     pub handle_size_title: f32,
     pub padding: f32,
@@ -87,6 +98,10 @@ pub struct NodeConfig {
 impl Default for NodeConfig {
     fn default() -> Self {
         Self {
+            border_thickness: 2.0,
+            color_border: Color::WHITE,
+            color_node: Color::rgb(0.3, 0.3, 0.3),
+            color_title: Color::rgb(0.004, 0.431, 0.49),
             handle_size_io: 6.0,
             handle_size_title: 10.0,
             padding: 5.0,
@@ -133,6 +148,31 @@ pub struct NodeOutput;
 
 pub enum NodeEvent<N: NodeSet> {
     Resolved(N::NodeIO),
+}
+
+#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
+pub struct NodeMaterial {
+    #[uniform(0)]
+    active: u32,
+    #[uniform(0)]
+    color: Color,
+    #[uniform(0)]
+    color_border: Color,
+    #[uniform(0)]
+    color_title: Color,
+    #[uniform(0)]
+    size: Vec2,
+    #[uniform(0)]
+    border_thickness: f32,
+    #[uniform(0)]
+    height_title: f32,
+}
+
+impl Material2d for NodeMaterial {
+    fn fragment_shader() -> ShaderRef {
+        "shaders/node.wgsl".into()
+    }
 }
 
 #[derive(Resource)]
@@ -229,8 +269,9 @@ fn activate_node(
     mut active_node: ResMut<ActiveNode>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
+    mut materials: ResMut<Assets<NodeMaterial>>,
     query: Query<(&Parent, &NodeHandle, &GlobalTransform)>,
-    q_parent: Query<&GlobalTransform>,
+    q_node: Query<(&Handle<NodeMaterial>, &GlobalTransform)>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         for (parent, handle, transform) in query.iter() {
@@ -241,19 +282,27 @@ fn activate_node(
                 && cursor.y >= position.y
                 && cursor.y <= position.y + handle.size.y
             {
-                let transform = q_parent.get(parent.get()).unwrap();
+                let (handle, transform) = q_node.get(parent.get()).unwrap();
                 let translation = transform.translation();
 
                 active_node.entity = Some(parent.get());
                 active_node.offset = Vec2::new(translation.x - cursor.x, translation.y - cursor.y);
-                break;
+
+                let mut material = materials.get_mut(handle).unwrap();
+
+                material.active = 1;
+                return;
             }
         }
-    }
 
-    if mouse_button_input.just_released(MouseButton::Left) {
-        active_node.entity = None;
-        active_node.offset = Vec2::ZERO;
+        if let Some(entity) = active_node.entity {
+            let (handle, _) = q_node.get(entity).unwrap();
+            let mut material = materials.get_mut(handle).unwrap();
+
+            material.active = 0;
+            active_node.entity = None;
+            active_node.offset = Vec2::ZERO;
+        }
     }
 }
 
@@ -262,6 +311,8 @@ fn build_node<N: NodeSet>(
     config: Res<NodeConfig>,
     resources: Res<NodeResources>,
     mut active_node: ResMut<ActiveNode>,
+    mut materials: ResMut<Assets<NodeMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
     query: Query<(Entity, &NodeTemplate<N>)>,
 ) {
     for (entity, template) in query.iter() {
@@ -279,7 +330,7 @@ fn build_node<N: NodeSet>(
         let height_io = config.font_size_body + config.padding * 2.0;
         let height_body = height_io * (n_io + 1) as f32 + slot_height;
         let height_title = config.font_size_title + config.padding * 2.0;
-        let height = height_body + height_title;
+        let height = height_body + height_title + 2.0;
         let node_size = Vec2::new(template.width, height);
         let width_interior = template.width - 2.0 * config.padding;
         let bounds_title = Vec2::new(width_interior, config.font_size_title);
@@ -290,23 +341,31 @@ fn build_node<N: NodeSet>(
 
         commands
             .entity(entity)
-            .insert(SpriteBundle {
-                sprite: Sprite {
-                    color: Color::rgb(0.3, 0.3, 0.3),
-                    custom_size: Some(Vec2::new(node_size.x, node_size.y)),
-                    ..default()
-                },
+            .insert(MaterialMesh2dBundle {
+                material: materials.add(NodeMaterial {
+                    active: template.activate as u32,
+                    color: config.color_node,
+                    color_border: config.color_border,
+                    color_title: config.color_title,
+                    size: node_size,
+                    border_thickness: config.border_thickness,
+                    height_title,
+                }),
+                mesh: Mesh2dHandle(
+                    meshes.add(
+                        shape::Quad {
+                            size: node_size,
+                            ..default()
+                        }
+                        .into(),
+                    ),
+                ),
                 transform: Transform::from_xyz(template.position.x, template.position.y, 0.0),
                 ..default()
             })
             .with_children(|parent| {
                 parent.spawn((
-                    SpriteBundle {
-                        sprite: Sprite {
-                            color: Color::rgb(0.004, 0.431, 0.49),
-                            custom_size: Some(Vec2::new(node_size.x, height_title)),
-                            ..default()
-                        },
+                    SpatialBundle {
                         transform: Transform::from_xyz(
                             0.0,
                             (node_size.y - height_title) / 2.0,
@@ -334,7 +393,7 @@ fn build_node<N: NodeSet>(
                     parent.spawn((
                         MaterialMesh2dBundle {
                             material: resources.material_handle_output.clone(),
-                            mesh: bevy::sprite::Mesh2dHandle(resources.mesh_handle_io.clone()),
+                            mesh: Mesh2dHandle(resources.mesh_handle_io.clone()),
                             transform: Transform::from_xyz(
                                 offset_x + node_size.x / 2.0 - config.handle_size_io,
                                 offset_y - config.handle_size_io - config.padding,
@@ -381,9 +440,7 @@ fn build_node<N: NodeSet>(
                             .with_children(|parent| {
                                 parent.spawn(MaterialMesh2dBundle {
                                     material: resources.material_handle_input_inactive.clone(),
-                                    mesh: bevy::sprite::Mesh2dHandle(
-                                        resources.mesh_handle_io.clone(),
-                                    ),
+                                    mesh: Mesh2dHandle(resources.mesh_handle_io.clone()),
                                     ..default()
                                 });
                             });
@@ -442,8 +499,13 @@ fn build_node<N: NodeSet>(
 fn drag_node<N: NodeSet>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
+    mouse_button_input: Res<Input<MouseButton>>,
     mut query: Query<&mut Transform, With<Node<N>>>,
 ) {
+    if !mouse_button_input.pressed(MouseButton::Left) {
+        return;
+    }
+
     if let Some(entity) = active_node.entity {
         if let Ok(mut transform) = query.get_mut(entity) {
             transform.translation.x = cursor.x + active_node.offset.x;
