@@ -31,6 +31,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             .add_startup_system(setup)
             .add_system(activate_node)
             .add_system(build_node::<N>)
+            .add_system(delete_node::<N>)
             .add_system(drag_node::<N>)
             .add_system(resolve_output_nodes::<N>);
     }
@@ -496,13 +497,29 @@ fn build_node<N: NodeSet>(
     }
 }
 
+fn delete_node<N: NodeSet>(
+    mut commands: Commands,
+    mut active_node: ResMut<ActiveNode>,
+    keys: Res<Input<KeyCode>>,
+) {
+    if keys.just_pressed(KeyCode::Delete) {
+        if let Some(entity) = active_node.entity {
+            commands.entity(entity).despawn_recursive();
+
+            active_node.entity = None;
+        }
+    }
+}
+
 fn drag_node<N: NodeSet>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut query: Query<&mut Transform, With<Node<N>>>,
 ) {
-    if !mouse_button_input.pressed(MouseButton::Left) {
+    if mouse_button_input.just_pressed(MouseButton::Left)
+        || !mouse_button_input.pressed(MouseButton::Left)
+    {
         return;
     }
 
