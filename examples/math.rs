@@ -206,7 +206,7 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
                     },
                 ]),
                 node: self,
-                output_label: Some("value".to_string()),
+                output_label: Some("result".to_string()),
                 ..default()
             },
             Self::Output => NodeTemplate {
