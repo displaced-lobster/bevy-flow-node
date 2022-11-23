@@ -22,7 +22,7 @@ impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
             .add_system(draw_partial_connections::<N>)
             .add_system(complete_partial_connection::<N>)
             .add_system(convert_partial_connection::<N>)
-            .add_system(create_partial_connection::<N>);
+            .add_system(create_partial_connection::<N>.before(break_connection::<N>));
     }
 }
 
@@ -53,6 +53,9 @@ struct PartialConnection {
     output: Option<Entity>,
 }
 
+#[derive(Component)]
+struct Connection;
+
 fn break_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
@@ -60,6 +63,7 @@ fn break_connection<N: NodeSet>(
     node_res: Res<NodeResources>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut ev_connection: EventWriter<ConnectionEvent>,
+    q_connection: Query<(Entity, &Parent), With<Connection>>,
     mut q_inputs: Query<(Entity, &mut NodeInput<N>, &GlobalTransform)>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
@@ -88,9 +92,13 @@ fn break_connection<N: NodeSet>(
                 },
             ));
 
-            commands
-                .entity(entity)
-                .insert(DrawMode::Stroke(StrokeMode::new(Color::BLACK, 0.0)));
+            for (connection_entity, parent) in q_connection.iter() {
+                if parent.get() == entity {
+                    commands.entity(connection_entity).despawn_recursive();
+                    break;
+                }
+            }
+
             node_input.connection = None;
             ev_connection.send(ConnectionEvent::Destroyed);
 
@@ -154,27 +162,38 @@ fn convert_partial_connection<N: NodeSet>(
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
     q_outputs: Query<&Parent, With<NodeOutput>>,
-    mut q_inputs: Query<(Entity, &Parent, &mut NodeInput<N>, &Transform)>,
+    mut q_inputs: Query<(Entity, &Parent, &GlobalTransform, &mut NodeInput<N>)>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     for (entity, connection) in q_connections.iter() {
         if let Some(input) = connection.input {
             if let Some(output) = connection.output {
-                if let Ok((input_entity, input_parent, mut input, transform)) =
+                if let Ok((input_entity, input_parent, &transform, mut input)) =
                     q_inputs.get_mut(input)
                 {
                     if let Ok(output_parent) = q_outputs.get(output) {
                         if input_parent.get() != output_parent.get() {
                             input.connection = Some(output);
 
-                            commands.entity(input_entity).insert(ShapeBundle {
-                                mode: DrawMode::Stroke(StrokeMode::new(
-                                    Color::WHITE,
-                                    config.connection_size,
-                                )),
-                                transform: *transform,
-                                ..default()
-                            });
+                            let child = commands
+                                .spawn((
+                                    ShapeBundle {
+                                        mode: DrawMode::Stroke(StrokeMode::new(
+                                            Color::WHITE,
+                                            config.connection_size,
+                                        )),
+                                        transform: Transform::from_xyz(
+                                            0.0,
+                                            0.0,
+                                            -transform.translation().z,
+                                        ),
+                                        ..default()
+                                    },
+                                    Connection,
+                                ))
+                                .id();
+
+                            commands.entity(input_entity).push_children(&[child]);
 
                             ev_connection.send(ConnectionEvent::Created);
 
@@ -254,26 +273,29 @@ fn create_partial_connection<N: NodeSet>(
 }
 
 fn draw_connections<N: NodeSet>(
-    mut q_input: Query<(&NodeInput<N>, &GlobalTransform, &mut Path)>,
+    mut q_connection: Query<(&Parent, &mut Path), With<Connection>>,
+    mut q_input: Query<(&NodeInput<N>, &GlobalTransform)>,
     q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
-    for (input, input_transform, mut path) in q_input.iter_mut() {
-        if let Some(entity) = input.connection {
-            if let Ok(output_transform) = q_output.get(entity) {
-                let mut path_builder = PathBuilder::new();
-                let input_position = input_transform.translation().truncate();
-                let output_position = output_transform.translation().truncate();
-                let end = output_position - input_position;
-                let half_x = end.x / 2.0;
-                let ctrl_1 = Vec2::new(half_x, 0.0);
-                let ctrl_2 = Vec2::new(half_x, end.y);
+    for (parent, mut path) in q_connection.iter_mut() {
+        if let Ok((input, input_transform)) = q_input.get_mut(parent.get()) {
+            if let Some(connection) = input.connection {
+                if let Ok(output_transform) = q_output.get(connection) {
+                    let mut path_builder = PathBuilder::new();
+                    let input_position = input_transform.translation().truncate();
+                    let output_position = output_transform.translation().truncate();
+                    let end = output_position - input_position;
+                    let half_x = end.x / 2.0;
+                    let ctrl_1 = Vec2::new(half_x, 0.0);
+                    let ctrl_2 = Vec2::new(half_x, end.y);
 
-                path_builder.move_to(Vec2::ZERO);
-                path_builder.cubic_bezier_to(ctrl_1, ctrl_2, end);
+                    path_builder.move_to(Vec2::ZERO);
+                    path_builder.cubic_bezier_to(ctrl_1, ctrl_2, end);
 
-                let line = path_builder.build();
+                    let line = path_builder.build();
 
-                *path = ShapePath::build_as(&line);
+                    *path = ShapePath::build_as(&line);
+                }
             }
         }
     }
