@@ -335,7 +335,7 @@ fn build_node<N: NodeSet>(
         let node_size = Vec2::new(template.width, height);
         let width_interior = template.width - 2.0 * config.padding;
         let bounds_title = Vec2::new(width_interior, config.font_size_title);
-        let bounds_io = Vec2::new(width_interior / 2.0, config.font_size_body);
+        let bounds_io = Vec2::new(width_interior, config.font_size_body);
         let offset_x = -node_size.x / 2.0 + config.padding;
         let mut offset_y = node_size.y / 2.0 - config.padding;
         let mut output = false;
@@ -389,14 +389,12 @@ fn build_node<N: NodeSet>(
                 offset_y -= height_title;
 
                 if let Some(label) = &template.output_label {
-                    let offset_x = config.padding;
-
                     parent.spawn((
                         MaterialMesh2dBundle {
                             material: resources.material_handle_output.clone(),
                             mesh: Mesh2dHandle(resources.mesh_handle_io.clone()),
                             transform: Transform::from_xyz(
-                                offset_x + node_size.x / 2.0 - config.handle_size_io,
+                                node_size.x / 2.0,
                                 offset_y - config.handle_size_io - config.padding,
                                 2.0,
                             ),
@@ -406,10 +404,11 @@ fn build_node<N: NodeSet>(
                     ));
 
                     parent.spawn(Text2dBundle {
-                        text: Text::from_section(label.clone(), resources.text_style_body.clone()),
+                        text: Text::from_section(label.clone(), resources.text_style_body.clone())
+                            .with_alignment(TextAlignment::TOP_RIGHT),
                         text_2d_bounds: Text2dBounds { size: bounds_io },
                         transform: Transform::from_xyz(
-                            offset_x + config.padding,
+                            node_size.x / 2.0 - config.handle_size_io - config.padding,
                             offset_y - config.font_size_body + config.handle_size_io * 2.0,
                             1.0,
                         ),
