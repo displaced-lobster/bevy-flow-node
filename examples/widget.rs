@@ -13,7 +13,7 @@ use std::{
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::BLACK))
+        .insert_resource(ClearColor(Color::rgb(0.12, 0.12, 0.12)))
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<IONodes>::default())
