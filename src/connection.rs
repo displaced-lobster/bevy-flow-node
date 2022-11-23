@@ -273,11 +273,14 @@ fn create_partial_connection<N: NodeSet>(
 }
 
 fn draw_connections<N: NodeSet>(
-    mut q_connection: Query<(&Parent, &mut Path), With<Connection>>,
+    mut commands: Commands,
+    mut q_connection: Query<(Entity, &Parent, &mut Path), With<Connection>>,
     mut q_input: Query<(&NodeInput<N>, &GlobalTransform)>,
     q_output: Query<&GlobalTransform, With<NodeOutput>>,
 ) {
-    for (parent, mut path) in q_connection.iter_mut() {
+    for (entity, parent, mut path) in q_connection.iter_mut() {
+        let mut cleanup = false;
+
         if let Ok((input, input_transform)) = q_input.get_mut(parent.get()) {
             if let Some(connection) = input.connection {
                 if let Ok(output_transform) = q_output.get(connection) {
@@ -295,8 +298,18 @@ fn draw_connections<N: NodeSet>(
                     let line = path_builder.build();
 
                     *path = ShapePath::build_as(&line);
+                } else {
+                    cleanup = true;
                 }
+            } else {
+                cleanup = true;
             }
+        } else {
+            cleanup = true;
+        }
+
+        if cleanup {
+            commands.entity(entity).despawn_recursive();
         }
     }
 }

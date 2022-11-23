@@ -500,11 +500,32 @@ fn delete_node<N: NodeSet>(
     mut commands: Commands,
     mut active_node: ResMut<ActiveNode>,
     keys: Res<Input<KeyCode>>,
+    node_res: Res<NodeResources>,
+    q_outputs: Query<(Entity, &Parent), With<NodeOutput>>,
+    mut q_inputs: Query<(Entity, &mut NodeInput<N>)>,
+    mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     if keys.just_pressed(KeyCode::Delete) {
         if let Some(entity) = active_node.entity {
-            commands.entity(entity).despawn_recursive();
+            for (output_entity, _) in q_outputs
+                .iter()
+                .filter(|(_, parent)| parent.get() == entity)
+            {
+                for (input_entity, mut input) in q_inputs.iter_mut() {
+                    if let Some(output) = input.connection {
+                        if output == output_entity {
+                            input.connection = None;
 
+                            for (parent, mut material) in q_material.iter_mut() {
+                                if parent.get() == input_entity {
+                                    *material = node_res.material_handle_input_inactive.clone();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            commands.entity(entity).despawn_recursive();
             active_node.entity = None;
         }
     }
