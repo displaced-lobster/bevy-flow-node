@@ -1,6 +1,7 @@
 use bevy::app::{PluginGroup, PluginGroupBuilder};
 use std::marker::PhantomData;
 
+pub mod camera;
 pub mod connection;
 pub mod cursor;
 pub mod menu;
@@ -9,6 +10,7 @@ pub mod widget;
 pub mod widgets;
 
 pub use crate::{
+    camera::PanCameraPlugin,
     menu::{NodeMenu, NodeMenuPlugin},
     node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet, NodeSlot, OutputNode},
     widget::{Widget, WidgetPlugin},

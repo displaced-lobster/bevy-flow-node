@@ -2,7 +2,7 @@ use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
-    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet,
+    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, PanCameraPlugin,
 };
 
 fn main() {
@@ -11,6 +11,7 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<LogicNodes>::default())
+        .add_plugin(PanCameraPlugin)
         .add_plugin(NodeMenuPlugin::<LogicMenu, LogicNodes>::default())
         .add_startup_system(setup)
         .run();
@@ -217,8 +218,6 @@ impl NodeMenu<LogicNodes> for LogicMenu {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-
     let template: NodeTemplate<LogicNodes> = LogicNodes::Result.into();
 
     commands.spawn(template);

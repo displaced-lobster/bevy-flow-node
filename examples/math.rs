@@ -3,7 +3,7 @@ use bevy_node_editor::{
     node::{NodeIOTemplate, NodeTemplate},
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot,
+    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot, PanCameraPlugin,
 };
 use std::collections::HashMap;
 
@@ -13,6 +13,7 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<MathNodes>::default())
+        .add_plugin(PanCameraPlugin)
         .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
         .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
         .add_plugin(TextInputWidgetPlugin::<MathNodes>::default())
@@ -237,8 +238,6 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
-
     let template: NodeTemplate<MathNodes> = MathNodes::Output.into();
 
     commands.spawn((
