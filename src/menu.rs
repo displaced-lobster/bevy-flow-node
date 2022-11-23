@@ -12,10 +12,11 @@ impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
             .insert_resource(MenuConfig::default())
             .add_event::<MenuEvent<N>>()
             .add_startup_system(setup)
-            .add_system(select_menu_option::<N>.before(close_menu))
+            .add_system(build_from_menu_select::<M, N>)
             .add_system(close_menu)
+            .add_system(hover_menu_option::<N>)
             .add_system(open_menu::<M, N>)
-            .add_system(build_from_menu_select::<M, N>);
+            .add_system(select_menu_option::<N>.before(close_menu));
     }
 }
 
@@ -30,6 +31,7 @@ struct Menu;
 #[derive(Resource)]
 pub struct MenuConfig {
     pub color: Color,
+    pub color_hover: Color,
     pub font_size: f32,
     pub option_height: f32,
     pub width: f32,
@@ -39,6 +41,7 @@ impl Default for MenuConfig {
     fn default() -> Self {
         Self {
             color: Color::rgb(0.1, 0.1, 0.1),
+            color_hover: Color::rgb(0.3, 0.3, 0.3),
             font_size: 16.0,
             option_height: 20.0,
             width: 150.0,
@@ -62,7 +65,7 @@ struct MenuResources {
 
 fn setup(mut commands: Commands, assert_server: Res<AssetServer>, config: Res<MenuConfig>) {
     let text_style = TextStyle {
-        font: assert_server.load("fonts/FiraSans-Bold.ttf"),
+        font: assert_server.load("fonts/FiraMono-Medium.ttf"),
         font_size: config.font_size,
         color: Color::WHITE,
     };
@@ -122,7 +125,7 @@ fn open_menu<M: NodeMenu<N>, N: NodeSet>(
                                     Val::Px(config.width),
                                     Val::Px(config.option_height),
                                 ),
-                                padding: UiRect::all(Val::Px(2.0)),
+                                padding: UiRect::all(Val::Px(5.0)),
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
@@ -145,17 +148,34 @@ fn open_menu<M: NodeMenu<N>, N: NodeSet>(
 }
 
 fn select_menu_option<N: NodeSet>(
-    mut commands: Commands,
     mut events: EventWriter<MenuEvent<N>>,
-    q_options: Query<(Entity, &MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
+    q_options: Query<(&MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
-    for (entity, option, interaction) in q_options.iter() {
+    for (option, interaction) in q_options.iter() {
         match interaction {
             Interaction::Clicked => {
-                commands.entity(entity).despawn_recursive();
                 events.send(MenuEvent::Selected(option.node.clone()));
             }
             _ => {}
+        }
+    }
+}
+
+fn hover_menu_option<N: NodeSet>(
+    config: Res<MenuConfig>,
+    mut q_options: Query<
+        (&Interaction, &mut BackgroundColor),
+        (Changed<Interaction>, With<MenuOption<N>>),
+    >,
+) {
+    for (interaction, mut color) in q_options.iter_mut() {
+        match interaction {
+            Interaction::Hovered => {
+                *color = config.color_hover.into();
+            }
+            _ => {
+                *color = config.color.into();
+            }
         }
     }
 }
