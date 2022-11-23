@@ -20,7 +20,7 @@ impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
 }
 
 pub trait NodeMenu<N: NodeSet>: Default + Resource {
-    fn build(&self, commands: &mut Commands, asset_server: &Res<AssetServer>, node: &N);
+    fn build(&self, commands: &mut Commands, node: &N);
     fn options(&self) -> Vec<(String, N)>;
 }
 
@@ -162,14 +162,13 @@ fn select_menu_option<N: NodeSet>(
 
 fn build_from_menu_select<M: NodeMenu<N>, N: NodeSet>(
     mut commands: Commands,
-    assert_server: Res<AssetServer>,
     menu: Res<M>,
     mut events: EventReader<MenuEvent<N>>,
 ) {
     for event in events.iter() {
         match event {
             MenuEvent::Selected(node) => {
-                menu.build(&mut commands, &assert_server, &node);
+                menu.build(&mut commands, &node);
             }
         }
     }

@@ -24,7 +24,7 @@ fn main() {
 struct MathMenu;
 
 impl NodeMenu<MathNodes> for MathMenu {
-    fn build(&self, commands: &mut Commands, _asset_server: &Res<AssetServer>, node: &MathNodes) {
+    fn build(&self, commands: &mut Commands, node: &MathNodes) {
         let template: NodeTemplate<MathNodes> = (*node).clone().into();
 
         let entity = commands.spawn(template).id();

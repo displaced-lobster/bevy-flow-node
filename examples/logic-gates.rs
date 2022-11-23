@@ -194,7 +194,7 @@ impl NodeSet for LogicNodes {
 struct LogicMenu;
 
 impl NodeMenu<LogicNodes> for LogicMenu {
-    fn build(&self, commands: &mut Commands, _asset_server: &Res<AssetServer>, node: &LogicNodes) {
+    fn build(&self, commands: &mut Commands, node: &LogicNodes) {
         let template: NodeTemplate<LogicNodes> = (*node).into();
 
         commands.spawn(template);
