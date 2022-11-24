@@ -4,6 +4,7 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderRef},
     sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
     text::Text2dBounds,
+    time::FixedTimestep,
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -33,12 +34,20 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             .add_system(build_node::<N>)
             .add_system(delete_node::<N>)
             .add_system(drag_node::<N>)
-            .add_system(resolve_output_nodes::<N>);
+            .add_system(resolve_output_nodes::<N>)
+            .add_system_set(
+                SystemSet::new()
+                    .with_run_criteria(FixedTimestep::step(1.0))
+                    .with_system(reset_node_indices::<N>)
+            );
     }
 }
 
 #[derive(Default, Resource)]
 struct ActiveNode {
+    count: u32,
+    index: f32,
+    index_reset: bool,
     entity: Option<Entity>,
     offset: Vec2,
 }
@@ -272,7 +281,7 @@ fn activate_node(
     mouse_button_input: Res<Input<MouseButton>>,
     mut materials: ResMut<Assets<NodeMaterial>>,
     query: Query<(&Parent, &NodeHandle, &GlobalTransform)>,
-    q_node: Query<(&Handle<NodeMaterial>, &GlobalTransform)>,
+    mut q_node: Query<(&Handle<NodeMaterial>, &mut Transform, &GlobalTransform)>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         for (parent, handle, transform) in query.iter() {
@@ -283,11 +292,13 @@ fn activate_node(
                 && cursor.y >= position.y
                 && cursor.y <= position.y + handle.size.y
             {
-                let (handle, transform) = q_node.get(parent.get()).unwrap();
-                let translation = transform.translation();
-
+                let (handle, mut transform, global_transform) = q_node.get_mut(parent.get()).unwrap();
+                transform.translation.z = active_node.index;
                 active_node.entity = Some(parent.get());
-                active_node.offset = Vec2::new(translation.x - cursor.x, translation.y - cursor.y);
+                active_node.index += 10.0;
+                active_node.index_reset = true;
+                active_node.offset = global_transform.translation().truncate() - cursor.position();
+
 
                 let mut material = materials.get_mut(handle).unwrap();
 
@@ -297,7 +308,7 @@ fn activate_node(
         }
 
         if let Some(entity) = active_node.entity {
-            let (handle, _) = q_node.get(entity).unwrap();
+            let (handle, _, _) = q_node.get(entity).unwrap();
             let mut material = materials.get_mut(handle).unwrap();
 
             material.active = 0;
@@ -361,7 +372,7 @@ fn build_node<N: NodeSet>(
                         .into(),
                     ),
                 ),
-                transform: Transform::from_xyz(template.position.x, template.position.y, 0.0),
+                transform: Transform::from_xyz(template.position.x, template.position.y, active_node.index),
                 ..default()
             })
             .with_children(|parent| {
@@ -493,6 +504,9 @@ fn build_node<N: NodeSet>(
             active_node.entity = Some(entity);
             active_node.offset = Vec2::ZERO;
         }
+
+        active_node.count += 1;
+        active_node.index += 10.0;
     }
 }
 
@@ -526,6 +540,7 @@ fn delete_node<N: NodeSet>(
                 }
             }
             commands.entity(entity).despawn_recursive();
+            active_node.count -= 1;
             active_node.entity = None;
         }
     }
@@ -565,5 +580,25 @@ fn resolve_output_nodes<N: NodeSet>(
                 node.resolve(entity, &q_nodes, &q_inputs, &q_outputs),
             ));
         }
+    }
+}
+
+fn reset_node_indices<N: NodeSet>(
+    mut active_node: ResMut<ActiveNode>,
+    mut query: Query<&mut Transform, With<Node<N>>>,
+) {
+    if active_node.index_reset {
+        active_node.index = 0.0;
+
+        let mut transforms = query.iter_mut().collect::<Vec<_>>();
+
+        transforms.sort_by(|a, b| a.translation.z.partial_cmp(&b.translation.z).unwrap());
+
+        for transform in transforms.iter_mut() {
+            transform.translation.z = active_node.index;
+            active_node.index += 10.0;
+        }
+
+        active_node.index_reset = false;
     }
 }
