@@ -1,4 +1,5 @@
 use bevy::{
+    asset::load_internal_asset,
     prelude::*,
     reflect::TypeUuid,
     render::render_resource::{AsBindGroup, ShaderRef},
@@ -13,6 +14,8 @@ use crate::{
     cursor::CursorPosition,
     interactions::{Clickable, Clicked},
 };
+
+const NODE_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
 
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
@@ -30,6 +33,12 @@ impl<N: NodeSet> Default for NodePlugin<N> {
 
 impl<N: NodeSet> Plugin for NodePlugin<N> {
     fn build(&self, app: &mut App) {
+        load_internal_asset!(
+            app,
+            NODE_SHADER_HANDLE,
+            "shaders/node.wgsl",
+            Shader::from_wgsl
+        );
         app.insert_resource(NodeConfig::default())
             .add_event::<NodeEvent<N>>()
             .add_plugin(Material2dPlugin::<NodeMaterial>::default())
@@ -183,7 +192,7 @@ pub struct NodeMaterial {
 
 impl Material2d for NodeMaterial {
     fn fragment_shader() -> ShaderRef {
-        "shaders/node.wgsl".into()
+        NODE_SHADER_HANDLE.typed().into()
     }
 }
 
