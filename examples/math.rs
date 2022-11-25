@@ -1,9 +1,9 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    node::{NodeIOTemplate, NodeTemplate},
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot, PanCameraPlugin,
+    NodeInput, NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
+    PanCameraPlugin,
 };
 use std::collections::HashMap;
 
@@ -180,42 +180,21 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
         match self {
             Self::Add => NodeTemplate {
                 title: "Add".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("result".to_string()),
                 node: self,
                 ..default()
             },
             Self::Mult => NodeTemplate {
                 title: "Multiply".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 node: self,
                 output_label: Some("result".to_string()),
                 ..default()
             },
             Self::Output => NodeTemplate {
                 title: "Output".to_string(),
-                inputs: Some(vec![NodeIOTemplate {
-                    label: "value".to_string(),
-                    ..default()
-                }]),
+                inputs: Some(vec![NodeInput::from_label("value")]),
                 node: self,
                 slot: Some(NodeSlot {
                     height: 20.0,

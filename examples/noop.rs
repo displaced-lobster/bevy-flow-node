@@ -1,9 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
-use bevy_node_editor::{
-    node::{NodeIOTemplate, NodeTemplate},
-    NodePlugins, NodeSet,
-};
+use bevy_node_editor::{NodeInput, NodePlugins, NodeSet, NodeTemplate};
 
 fn main() {
     App::new()
@@ -39,10 +36,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(200.0, 0.0),
         title: "Node 2".to_string(),
-        inputs: Some(vec![NodeIOTemplate {
-            label: "Input".to_string(),
-            ..default()
-        }]),
+        inputs: Some(vec![NodeInput::from_label("Input")]),
         ..default()
     });
 }

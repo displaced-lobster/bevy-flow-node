@@ -121,7 +121,7 @@ impl Default for NodeConfig {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Clone, Component, Default)]
 pub struct NodeInput<N: NodeSet> {
     pub connection: Option<Entity>,
     pub default: N::NodeIO,
@@ -130,6 +130,13 @@ pub struct NodeInput<N: NodeSet> {
 }
 
 impl<N: NodeSet> NodeInput<N> {
+    pub fn from_label(label: &str) -> Self {
+        Self {
+            label: label.to_string(),
+            ..default()
+        }
+    }
+
     pub fn get_input(
         &self,
         q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
@@ -155,7 +162,7 @@ pub enum NodeEvent<N: NodeSet> {
     Resolved(N::NodeIO),
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone)]
+#[derive(AsBindGroup, TypeUuid, Debug, Clone, Default)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct NodeMaterial {
     #[uniform(0)]
@@ -196,23 +203,9 @@ pub struct NodeSlot {
     pub width: f32,
 }
 
-pub struct NodeIOTemplate {
-    pub label: String,
-}
-
-impl Default for NodeIOTemplate {
-    fn default() -> Self {
-        Self {
-            label: "I/O".to_string(),
-        }
-    }
-}
-
 #[derive(Component)]
 pub struct NodeTemplate<N: NodeSet> {
-    pub activate: bool,
-    pub height: f32,
-    pub inputs: Option<Vec<NodeIOTemplate>>,
+    pub inputs: Option<Vec<NodeInput<N>>>,
     pub node: N,
     pub output_label: Option<String>,
     pub position: Vec2,
@@ -224,8 +217,6 @@ pub struct NodeTemplate<N: NodeSet> {
 impl<N: NodeSet> Default for NodeTemplate<N> {
     fn default() -> Self {
         Self {
-            activate: false,
-            height: 0.0,
             inputs: None,
             node: N::default(),
             position: Vec2::ZERO,
@@ -351,13 +342,13 @@ fn build_node<N: NodeSet>(
             .insert((
                 MaterialMesh2dBundle {
                     material: materials.add(NodeMaterial {
-                        active: template.activate as u32,
                         color: config.color_node,
                         color_border: config.color_border,
                         color_title: config.color_title,
                         size: node_size,
                         border_thickness: config.border_thickness,
                         height_title,
+                        ..default()
                     }),
                     mesh: Mesh2dHandle(
                         meshes.add(
@@ -426,7 +417,7 @@ fn build_node<N: NodeSet>(
                 offset_y -= height_io;
 
                 if let Some(inputs) = &template.inputs {
-                    for io_template in inputs.iter() {
+                    for input in inputs.iter() {
                         parent
                             .spawn((
                                 SpatialBundle {
@@ -437,10 +428,7 @@ fn build_node<N: NodeSet>(
                                     ),
                                     ..default()
                                 },
-                                NodeInput::<N> {
-                                    label: io_template.label.clone(),
-                                    ..default()
-                                },
+                                (*input).clone(),
                                 Clickable::Radius(config.handle_size_io),
                             ))
                             .with_children(|parent| {
@@ -453,7 +441,7 @@ fn build_node<N: NodeSet>(
 
                         parent.spawn(Text2dBundle {
                             text: Text::from_section(
-                                io_template.label.clone(),
+                                input.label.clone(),
                                 resources.text_style_body.clone(),
                             ),
                             text_2d_bounds: Text2dBounds { size: bounds_io },
@@ -487,11 +475,6 @@ fn build_node<N: NodeSet>(
 
         if output {
             commands.entity(entity).insert(OutputNode);
-        }
-
-        if template.activate {
-            active_node.entity = Some(entity);
-            active_node.offset = Vec2::ZERO;
         }
 
         active_node.count += 1;

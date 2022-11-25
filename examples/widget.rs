@@ -1,9 +1,8 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    node::{NodeIOTemplate, NodeTemplate},
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodePlugins, NodeSet, NodeSlot,
+    NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
 };
 use std::{
     collections::HashMap,
@@ -112,10 +111,7 @@ fn setup(mut commands: Commands) {
         NodeTemplate::<IONodes> {
             position: Vec2::new(220.0, 0.0),
             title: "Output".to_string(),
-            inputs: Some(vec![NodeIOTemplate {
-                label: "input".to_string(),
-                ..default()
-            }]),
+            inputs: Some(vec![NodeInput::from_label("input")]),
             node: IONodes::Output,
             slot: Some(NodeSlot {
                 height: 20.0,

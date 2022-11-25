@@ -1,8 +1,7 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
-    node::{NodeIOTemplate, NodeTemplate},
-    NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, PanCameraPlugin,
+    NodeInput, NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeTemplate, PanCameraPlugin,
 };
 
 fn main() {
@@ -49,116 +48,56 @@ impl Into<NodeTemplate<LogicNodes>> for LogicNodes {
             },
             Self::And => NodeTemplate {
                 title: "And".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("a & b".to_string()),
                 node: self,
                 ..default()
             },
             Self::Or => NodeTemplate {
                 title: "Or".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("a | b".to_string()),
                 node: self,
                 ..default()
             },
             Self::Not => NodeTemplate {
                 title: "Not".to_string(),
-                inputs: Some(vec![NodeIOTemplate {
-                    label: "a".to_string(),
-                    ..default()
-                }]),
+                inputs: Some(vec![NodeInput::from_label("a")]),
                 output_label: Some("!a".to_string()),
                 node: self,
                 ..default()
             },
             Self::Xor => NodeTemplate {
                 title: "Xor".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("a ^ b".to_string()),
                 node: self,
                 ..default()
             },
             Self::Nand => NodeTemplate {
                 title: "Nand".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("!(a & b)".to_string()),
                 node: self,
                 ..default()
             },
             Self::Nor => NodeTemplate {
                 title: "Nor".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("!(a | b)".to_string()),
                 node: self,
                 ..default()
             },
             Self::Xnor => NodeTemplate {
                 title: "Xnor".to_string(),
-                inputs: Some(vec![
-                    NodeIOTemplate {
-                        label: "a".to_string(),
-                        ..default()
-                    },
-                    NodeIOTemplate {
-                        label: "b".to_string(),
-                        ..default()
-                    },
-                ]),
+                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 output_label: Some("!(a ^ b)".to_string()),
                 node: self,
                 ..default()
             },
             Self::Result => NodeTemplate {
                 title: "Result".to_string(),
-                inputs: Some(vec![NodeIOTemplate {
-                    label: "a".to_string(),
-                    ..default()
-                }]),
+                inputs: Some(vec![NodeInput::from_label("a")]),
                 node: self,
                 ..default()
             },
