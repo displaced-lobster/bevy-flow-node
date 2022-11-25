@@ -280,9 +280,15 @@ fn activate_node(
     mut q_node: Query<(&Handle<NodeMaterial>, &mut Transform, &GlobalTransform)>,
 ) {
     for ev in ev_click.iter() {
-        let mut needs_deactivate = false;
+        let to_deactivate = active_node.entity;
 
         if let Clicked(Some(entity)) = ev {
+            if let Some(active_entity) = active_node.entity {
+                if active_entity == *entity {
+                    return;
+                }
+            }
+
             if let Ok((handle, mut transform, global_transform)) = q_node.get_mut(*entity) {
                 transform.translation.z = active_node.index;
                 active_node.entity = Some(*entity);
@@ -294,19 +300,17 @@ fn activate_node(
 
                 material.active = 1;
             } else {
-                needs_deactivate = true;
+                active_node.entity = None;
             }
         } else {
-            needs_deactivate = true;
+            active_node.entity = None;
         }
 
-        if needs_deactivate && active_node.entity.is_some() {
-            let (handle, _, _) = q_node.get(active_node.entity.unwrap()).unwrap();
+        if let Some(entity) = to_deactivate {
+            let (handle, _, _) = q_node.get(entity).unwrap();
             let mut material = materials.get_mut(handle).unwrap();
 
             material.active = 0;
-            active_node.entity = None;
-            active_node.offset = Vec2::ZERO;
         }
     }
 }
