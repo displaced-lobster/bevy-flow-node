@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::marker::PhantomData;
 
 use crate::{
-    cursor::CursorPosition,
+    interactions::{Clickable, Clicked},
     node::{NodeSet, NodeSlot},
 };
 
@@ -14,6 +14,9 @@ pub trait Widget<N: NodeSet>: Clone + Component {
         area: Vec2,
         asset_server: &Res<AssetServer>,
     ) -> Entity;
+    fn can_click(&self) -> bool {
+        false
+    }
     fn clean(&mut self) {}
     fn dirty(&self) -> bool {
         false
@@ -35,41 +38,52 @@ pub struct WidgetPlugin<N: NodeSet, W: Widget<N>>(PhantomData<(N, W)>);
 
 impl<N: NodeSet, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
-        app.insert_resource(ActiveWidget::default())
-            .add_system(focus_widget::<N, W>)
+        app.insert_resource(ActiveWidget::<N, W>::default())
+            .add_system(focus_blur_widget::<N, W>)
             .add_system(build_widget::<N, W>)
-            .add_system(blur_widget::<N, W>)
             .add_system(slot_widget::<N, W>);
     }
 }
 
-#[derive(Default, Resource)]
-struct ActiveWidget {
+#[derive(Resource)]
+struct ActiveWidget<N: NodeSet, W: Widget<N>> {
     entity: Option<Entity>,
+    _phantom: PhantomData<(N, W)>,
 }
 
-fn focus_widget<N: NodeSet, W: Widget<N>>(
-    cursor: Res<CursorPosition>,
-    mouse_button: Res<Input<MouseButton>>,
-    mut active_widget: ResMut<ActiveWidget>,
-    mut query: Query<(Entity, &mut W, &GlobalTransform)>,
-) {
-    if !mouse_button.just_pressed(MouseButton::Left) {
-        return;
+impl<N: NodeSet, W: Widget<N>> Default for ActiveWidget<N, W> {
+    fn default() -> Self {
+        Self {
+            entity: None,
+            _phantom: PhantomData,
+        }
     }
+}
 
-    for (entity, mut widget, transform) in query.iter_mut() {
-        let size = widget.size();
-        let position = transform.translation().truncate() - 0.5 * size;
+fn focus_blur_widget<N: NodeSet, W: Widget<N>>(
+    mut active_widget: ResMut<ActiveWidget<N, W>>,
+    mut ev_click: EventReader<Clicked>,
+    mut query: Query<(Entity, &mut W), With<Clickable>>,
+) {
+    for ev in ev_click.iter() {
+        let mut needs_blur = false;
 
-        if cursor.x >= position.x
-            && cursor.x <= position.x + size.x
-            && cursor.y >= position.y
-            && cursor.y <= position.y + size.y
-        {
-            active_widget.entity = Some(entity);
-            widget.focus();
-            return;
+        if let Clicked(Some(entity)) = ev {
+            if let Ok((_, mut widget)) = query.get_mut(*entity) {
+                active_widget.entity = Some(*entity);
+                widget.focus();
+            } else {
+                needs_blur = true;
+            }
+        } else {
+            needs_blur = true;
+        }
+
+        if needs_blur && active_widget.entity.is_some() {
+            if let Ok((_, mut widget)) = query.get_mut(active_widget.entity.unwrap()) {
+                widget.blur();
+            }
+            active_widget.entity = None;
         }
     }
 }
@@ -90,31 +104,11 @@ fn build_widget<N: NodeSet, W: Widget<N>>(
             .entity(entity)
             .push_children(&[widget_entity])
             .remove::<NodeSlot>();
-    }
-}
 
-fn blur_widget<N: NodeSet, W: Widget<N>>(
-    cursor: Res<CursorPosition>,
-    mouse_button: Res<Input<MouseButton>>,
-    mut active_widget: ResMut<ActiveWidget>,
-    mut query: Query<(&mut W, &GlobalTransform)>,
-) {
-    if !mouse_button.just_pressed(MouseButton::Left) || active_widget.entity.is_none() {
-        return;
-    }
-
-    if let Ok((mut widget, transform)) = query.get_mut(active_widget.entity.unwrap()) {
-        let size = widget.size();
-        let position = transform.translation().truncate() - 0.5 * size;
-
-        if !(cursor.x >= position.x
-            && cursor.x <= position.x + size.x
-            && cursor.y >= position.y
-            && cursor.y <= position.y + size.y)
-        {
-            active_widget.entity = None;
-            widget.blur();
-            return;
+        if widget.can_click() {
+            commands
+                .entity(entity)
+                .insert(Clickable::Area(widget.size()));
         }
     }
 }
@@ -128,7 +122,6 @@ fn slot_widget<N: NodeSet, W: Widget<N>>(
         for (slot_entity, parent) in q_slot.iter() {
             if parent.get() == entity {
                 commands.entity(slot_entity).insert(widget.clone());
-
                 commands.entity(entity).remove::<W>();
             }
         }

@@ -58,11 +58,6 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
                         custom_size: Some(self.size),
                         ..default()
                     },
-                    transform: Transform::from_xyz(
-                        self.size.x / 2.0 - 5.0,
-                        -self.size.y / 2.0,
-                        1.0,
-                    ),
                     ..default()
                 });
 
@@ -70,7 +65,7 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
                     .spawn(Text2dBundle {
                         text: Text::from_section("", text_style_title),
                         text_2d_bounds: Text2dBounds { size: self.size },
-                        transform: Transform::from_xyz(0.0, 0.0, 2.0),
+                        transform: Transform::from_xyz(-self.size.x / 2.0, self.size.y / 2.0, 2.0),
                         ..default()
                     })
                     .id();
@@ -82,6 +77,10 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
 
     fn blur(&mut self) {
         self.active = false;
+    }
+
+    fn can_click(&self) -> bool {
+        true
     }
 
     fn clean(&mut self) {

@@ -8,7 +8,11 @@ use bevy::{
 };
 use std::{collections::HashMap, marker::PhantomData};
 
-use crate::{connection::ConnectionEvent, cursor::CursorPosition};
+use crate::{
+    connection::ConnectionEvent,
+    cursor::CursorPosition,
+    interactions::{Clickable, Clicked},
+};
 
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
@@ -38,7 +42,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             .add_system_set(
                 SystemSet::new()
                     .with_run_criteria(FixedTimestep::step(1.0))
-                    .with_system(reset_node_indices::<N>)
+                    .with_system(reset_node_indices::<N>),
             );
     }
 }
@@ -99,7 +103,6 @@ pub struct NodeConfig {
     pub color_node: Color,
     pub color_title: Color,
     pub handle_size_io: f32,
-    pub handle_size_title: f32,
     pub padding: f32,
     pub font_size_body: f32,
     pub font_size_title: f32,
@@ -113,17 +116,11 @@ impl Default for NodeConfig {
             color_node: Color::rgb(0.3, 0.3, 0.3),
             color_title: Color::rgb(0.004, 0.431, 0.49),
             handle_size_io: 6.0,
-            handle_size_title: 10.0,
             padding: 5.0,
             font_size_body: 16.0,
             font_size_title: 20.0,
         }
     }
-}
-
-#[derive(Component)]
-struct NodeHandle {
-    size: Vec2,
 }
 
 #[derive(Component, Default)]
@@ -276,39 +273,35 @@ fn setup(
 }
 
 fn activate_node(
-    mut active_node: ResMut<ActiveNode>,
     cursor: Res<CursorPosition>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mut active_node: ResMut<ActiveNode>,
     mut materials: ResMut<Assets<NodeMaterial>>,
-    query: Query<(&Parent, &NodeHandle, &GlobalTransform)>,
+    mut ev_click: EventReader<Clicked>,
     mut q_node: Query<(&Handle<NodeMaterial>, &mut Transform, &GlobalTransform)>,
 ) {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
-        for (parent, handle, transform) in query.iter() {
-            let position = transform.translation().truncate() - 0.5 * handle.size;
+    for ev in ev_click.iter() {
+        let mut needs_deactivate = false;
 
-            if cursor.x >= position.x
-                && cursor.x <= position.x + handle.size.x
-                && cursor.y >= position.y
-                && cursor.y <= position.y + handle.size.y
-            {
-                let (handle, mut transform, global_transform) = q_node.get_mut(parent.get()).unwrap();
+        if let Clicked(Some(entity)) = ev {
+            if let Ok((handle, mut transform, global_transform)) = q_node.get_mut(*entity) {
                 transform.translation.z = active_node.index;
-                active_node.entity = Some(parent.get());
+                active_node.entity = Some(*entity);
                 active_node.index += 10.0;
                 active_node.index_reset = true;
                 active_node.offset = global_transform.translation().truncate() - cursor.position();
 
-
                 let mut material = materials.get_mut(handle).unwrap();
 
                 material.active = 1;
-                return;
+            } else {
+                needs_deactivate = true;
             }
+        } else {
+            needs_deactivate = true;
         }
 
-        if let Some(entity) = active_node.entity {
-            let (handle, _, _) = q_node.get(entity).unwrap();
+        if needs_deactivate && active_node.entity.is_some() {
+            let (handle, _, _) = q_node.get(active_node.entity.unwrap()).unwrap();
             let mut material = materials.get_mut(handle).unwrap();
 
             material.active = 0;
@@ -353,42 +346,40 @@ fn build_node<N: NodeSet>(
 
         commands
             .entity(entity)
-            .insert(MaterialMesh2dBundle {
-                material: materials.add(NodeMaterial {
-                    active: template.activate as u32,
-                    color: config.color_node,
-                    color_border: config.color_border,
-                    color_title: config.color_title,
-                    size: node_size,
-                    border_thickness: config.border_thickness,
-                    height_title,
-                }),
-                mesh: Mesh2dHandle(
-                    meshes.add(
-                        shape::Quad {
-                            size: node_size,
-                            ..default()
-                        }
-                        .into(),
-                    ),
-                ),
-                transform: Transform::from_xyz(template.position.x, template.position.y, active_node.index),
-                ..default()
-            })
-            .with_children(|parent| {
-                parent.spawn((
-                    SpatialBundle {
-                        transform: Transform::from_xyz(
-                            0.0,
-                            (node_size.y - height_title) / 2.0,
-                            1.0,
+            .insert((
+                MaterialMesh2dBundle {
+                    material: materials.add(NodeMaterial {
+                        active: template.activate as u32,
+                        color: config.color_node,
+                        color_border: config.color_border,
+                        color_title: config.color_title,
+                        size: node_size,
+                        border_thickness: config.border_thickness,
+                        height_title,
+                    }),
+                    mesh: Mesh2dHandle(
+                        meshes.add(
+                            shape::Quad {
+                                size: node_size,
+                                ..default()
+                            }
+                            .into(),
                         ),
-                        ..default()
-                    },
-                    NodeHandle {
-                        size: Vec2::new(template.width, height_title),
-                    },
-                ));
+                    ),
+                    transform: Transform::from_xyz(
+                        template.position.x,
+                        template.position.y,
+                        active_node.index,
+                    ),
+                    ..default()
+                },
+                Clickable::Area(node_size),
+            ))
+            .with_children(|parent| {
+                parent.spawn(SpatialBundle {
+                    transform: Transform::from_xyz(0.0, (node_size.y - height_title) / 2.0, 1.0),
+                    ..default()
+                });
 
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
@@ -412,6 +403,7 @@ fn build_node<N: NodeSet>(
                             ..default()
                         },
                         NodeOutput,
+                        Clickable::Radius(config.handle_size_io),
                     ));
 
                     parent.spawn(Text2dBundle {
@@ -447,6 +439,7 @@ fn build_node<N: NodeSet>(
                                     label: io_template.label.clone(),
                                     ..default()
                                 },
+                                Clickable::Radius(config.handle_size_io),
                             ))
                             .with_children(|parent| {
                                 parent.spawn(MaterialMesh2dBundle {
@@ -477,14 +470,10 @@ fn build_node<N: NodeSet>(
                 if let Some(slot) = template.slot {
                     let mut slot = slot;
 
-                    slot.width = template.width - 2.0 * config.padding;
+                    slot.width = width_interior;
                     parent.spawn((
                         SpatialBundle {
-                            transform: Transform::from_xyz(
-                                offset_x + config.padding,
-                                offset_y,
-                                1.0,
-                            ),
+                            transform: Transform::from_xyz(0.0, offset_y - slot.height / 2.0, 1.0),
                             ..default()
                         },
                         slot,

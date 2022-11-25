@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 pub mod camera;
 pub mod connection;
 pub mod cursor;
+pub mod interactions;
 pub mod menu;
 pub mod node;
 pub mod widget;
@@ -24,6 +25,7 @@ impl<N: NodeSet> PluginGroup for NodePlugins<N> {
         PluginGroupBuilder::start::<Self>()
             .add(connection::ConnectionPlugin::<N>::default())
             .add(cursor::CursorPlugin)
+            .add(interactions::InteractionPlugin)
             .add(node::NodePlugin::<N>::default())
     }
 }

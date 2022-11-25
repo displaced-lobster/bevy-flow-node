@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 
 use crate::{
     cursor::CursorPosition,
+    interactions::Clicked,
     node::{NodeInput, NodeOutput, NodeResources, NodeSet},
 };
 
@@ -29,14 +30,14 @@ impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
 #[derive(Resource)]
 pub struct ConnectionConfig {
     pub connection_size: f32,
-    pub threshold_radius: f32,
+    pub connection_threshold: f32,
 }
 
 impl Default for ConnectionConfig {
     fn default() -> Self {
         Self {
             connection_size: 2.0,
-            threshold_radius: 6.0,
+            connection_threshold: 10.0,
         }
     }
 }
@@ -59,56 +60,48 @@ struct Connection;
 fn break_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
-    cursor: Res<CursorPosition>,
     node_res: Res<NodeResources>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mut ev_click: EventReader<Clicked>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connection: Query<(Entity, &Parent), With<Connection>>,
-    mut q_inputs: Query<(Entity, &mut NodeInput<N>, &GlobalTransform)>,
+    mut q_inputs: Query<&mut NodeInput<N>>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
-    if !mouse_button_input.just_pressed(MouseButton::Left) {
-        return;
-    }
+    for ev in ev_click.iter() {
+        if let Clicked(Some(entity)) = ev {
+            if let Ok(mut node_input) = q_inputs.get_mut(*entity) {
+                if node_input.connection.is_some() {
+                    commands.spawn((
+                        PartialConnection {
+                            input: None,
+                            output: node_input.connection,
+                        },
+                        ShapeBundle {
+                            mode: DrawMode::Stroke(StrokeMode::new(
+                                Color::WHITE,
+                                config.connection_size,
+                            )),
+                            ..default()
+                        },
+                    ));
 
-    for (entity, mut node_input, transform) in q_inputs.iter_mut() {
-        if node_input.connection.is_none() {
-            continue;
-        }
+                    for (connection_entity, parent) in q_connection.iter() {
+                        if parent.get() == *entity {
+                            commands.entity(connection_entity).despawn_recursive();
+                            break;
+                        }
+                    }
 
-        let translation = transform.translation();
+                    node_input.connection = None;
+                    ev_connection.send(ConnectionEvent::Destroyed);
 
-        if (translation.x - cursor.x).abs() < config.threshold_radius
-            && (translation.y - cursor.y).abs() < config.threshold_radius
-        {
-            commands.spawn((
-                PartialConnection {
-                    input: None,
-                    output: node_input.connection,
-                },
-                ShapeBundle {
-                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                    ..default()
-                },
-            ));
-
-            for (connection_entity, parent) in q_connection.iter() {
-                if parent.get() == entity {
-                    commands.entity(connection_entity).despawn_recursive();
-                    break;
+                    for (parent, mut material) in q_material.iter_mut() {
+                        if parent.get() == *entity {
+                            *material = node_res.material_handle_input_inactive.clone();
+                        }
+                    }
                 }
             }
-
-            node_input.connection = None;
-            ev_connection.send(ConnectionEvent::Destroyed);
-
-            for (parent, mut material) in q_material.iter_mut() {
-                if parent.get() == entity {
-                    *material = node_res.material_handle_input_inactive.clone();
-                }
-            }
-
-            return;
         }
     }
 }
@@ -128,8 +121,8 @@ fn complete_partial_connection<T: NodeSet>(
                 for (entity, transform) in q_output.iter() {
                     let translation = transform.translation();
 
-                    if (translation.x - cursor.x).abs() < config.threshold_radius
-                        && (translation.y - cursor.y).abs() < config.threshold_radius
+                    if (translation.x - cursor.x).abs() < config.connection_threshold
+                        && (translation.y - cursor.y).abs() < config.connection_threshold
                     {
                         connection.output = Some(entity);
                         break;
@@ -139,8 +132,8 @@ fn complete_partial_connection<T: NodeSet>(
                 for (entity, transform) in q_input.iter() {
                     let translation = transform.translation();
 
-                    if (translation.x - cursor.x).abs() < config.threshold_radius
-                        && (translation.y - cursor.y).abs() < config.threshold_radius
+                    if (translation.x - cursor.x).abs() < config.connection_threshold
+                        && (translation.y - cursor.y).abs() < config.connection_threshold
                     {
                         connection.input = Some(entity);
                         break;
@@ -215,59 +208,48 @@ fn convert_partial_connection<N: NodeSet>(
 fn create_partial_connection<N: NodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
-    cursor: Res<CursorPosition>,
-    mouse_button_input: Res<Input<MouseButton>>,
+    mut ev_click: EventReader<Clicked>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<(Entity, &NodeInput<N>, &GlobalTransform)>,
-    q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
+    q_input: Query<&NodeInput<N>>,
+    q_output: Query<&NodeOutput>,
 ) {
-    if !q_connections.is_empty() || !mouse_button_input.just_pressed(MouseButton::Left) {
+    if !q_connections.is_empty() {
         return;
     }
 
-    for (entity, node_input, transform) in q_input.iter() {
-        if node_input.connection.is_some() {
-            continue;
-        }
-
-        let translation = transform.translation();
-
-        if (translation.x - cursor.x).abs() < config.threshold_radius
-            && (translation.y - cursor.y).abs() < config.threshold_radius
-        {
-            commands.spawn((
-                PartialConnection {
-                    input: Some(entity),
-                    output: None,
-                },
-                ShapeBundle {
-                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                    ..default()
-                },
-            ));
-
-            return;
-        }
-    }
-
-    for (entity, trasnform) in q_output.iter() {
-        let translation = trasnform.translation();
-
-        if (translation.x - cursor.x).abs() < config.threshold_radius
-            && (translation.y - cursor.y).abs() < config.threshold_radius
-        {
-            commands.spawn((
-                PartialConnection {
-                    input: None,
-                    output: Some(entity),
-                },
-                ShapeBundle {
-                    mode: DrawMode::Stroke(StrokeMode::new(Color::WHITE, config.connection_size)),
-                    ..default()
-                },
-            ));
-
-            return;
+    for ev in ev_click.iter() {
+        if let Clicked(Some(entity)) = ev {
+            if let Ok(node_input) = q_input.get(*entity) {
+                if node_input.connection.is_none() {
+                    commands.spawn((
+                        PartialConnection {
+                            input: Some(*entity),
+                            output: None,
+                        },
+                        ShapeBundle {
+                            mode: DrawMode::Stroke(StrokeMode::new(
+                                Color::WHITE,
+                                config.connection_size,
+                            )),
+                            ..default()
+                        },
+                    ));
+                }
+            } else if q_output.get(*entity).is_ok() {
+                commands.spawn((
+                    PartialConnection {
+                        input: None,
+                        output: Some(*entity),
+                    },
+                    ShapeBundle {
+                        mode: DrawMode::Stroke(StrokeMode::new(
+                            Color::WHITE,
+                            config.connection_size,
+                        )),
+                        ..default()
+                    },
+                ));
+            }
         }
     }
 }
