@@ -151,7 +151,7 @@ fn text_widget_value<N: NodeSet>(
             }
 
             if let Ok(mut node) = q_node.get_mut(parent.get()) {
-                node.node.receive_value(widget.get_value());
+                (*node).receive_value(widget.get_value());
                 ev_conn.send(ConnectionEvent::Propagate);
             }
         }

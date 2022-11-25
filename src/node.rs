@@ -56,10 +56,8 @@ struct ActiveNode {
     offset: Vec2,
 }
 
-#[derive(Component, Default)]
-pub struct Node<N: NodeSet> {
-    pub node: N,
-}
+#[derive(Component, Default, Deref, DerefMut)]
+pub struct Node<N: NodeSet>(N);
 
 impl<N: NodeSet> Node<N> {
     pub fn get_inputs(
@@ -92,7 +90,7 @@ impl<N: NodeSet> Node<N> {
     ) -> N::NodeIO {
         let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
-        self.node.resolve(&inputs)
+        self.0.resolve(&inputs)
     }
 }
 
@@ -484,9 +482,7 @@ fn build_node<N: NodeSet>(
                     ));
                 }
             })
-            .insert(Node {
-                node: template.node.clone(),
-            })
+            .insert(Node(template.node.clone()))
             .remove::<NodeTemplate<N>>();
 
         if output {
