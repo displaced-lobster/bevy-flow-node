@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    assets::DefaultAssets,
     connection::ConnectionEvent,
     node::{Node, NodeSet},
     widget::{ReceiveWidgetValue, Widget, WidgetPlugin},
@@ -39,10 +40,10 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
         &mut self,
         commands: &mut Commands,
         area: Vec2,
-        asset_server: &Res<AssetServer>,
+        assets: &Res<DefaultAssets>,
     ) -> Entity {
         let text_style_title = TextStyle {
-            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+            font: assets.font.clone(),
             font_size: 16.0,
             color: Color::BLACK,
         };

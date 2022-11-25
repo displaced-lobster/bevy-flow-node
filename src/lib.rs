@@ -1,6 +1,7 @@
 use bevy::app::{PluginGroup, PluginGroupBuilder};
 use std::marker::PhantomData;
 
+pub mod assets;
 pub mod camera;
 pub mod connection;
 pub mod cursor;
@@ -23,6 +24,7 @@ pub struct NodePlugins<N: NodeSet>(PhantomData<N>);
 impl<N: NodeSet> PluginGroup for NodePlugins<N> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
+            .add(assets::DefaultAssetsPlugin)
             .add(connection::ConnectionPlugin::<N>::default())
             .add(cursor::CursorPlugin)
             .add(interactions::InteractionPlugin)

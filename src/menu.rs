@@ -1,7 +1,7 @@
 use bevy::{ecs::system::Resource, prelude::*};
 use std::marker::PhantomData;
 
-use crate::{cursor::CursorPosition, node::NodeSet};
+use crate::{assets::DefaultAssets, cursor::CursorPosition, node::NodeSet};
 
 #[derive(Default)]
 pub struct NodeMenuPlugin<M: NodeMenu<N>, N: NodeSet>(PhantomData<(M, N)>);
@@ -63,9 +63,9 @@ struct MenuResources {
     text_style: TextStyle,
 }
 
-fn setup(mut commands: Commands, assert_server: Res<AssetServer>, config: Res<MenuConfig>) {
+fn setup(mut commands: Commands, assets: Res<DefaultAssets>, config: Res<MenuConfig>) {
     let text_style = TextStyle {
-        font: assert_server.load("fonts/FiraMono-Medium.ttf"),
+        font: assets.font.clone(),
         font_size: config.font_size,
         color: Color::WHITE,
     };

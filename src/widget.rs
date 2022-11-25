@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use std::marker::PhantomData;
 
 use crate::{
+    assets::DefaultAssets,
     interactions::{Clickable, Clicked},
     node::{NodeSet, NodeSlot},
 };
@@ -12,7 +13,7 @@ pub trait Widget<N: NodeSet>: Clone + Component {
         &mut self,
         commands: &mut Commands,
         area: Vec2,
-        asset_server: &Res<AssetServer>,
+        assets: &Res<DefaultAssets>,
     ) -> Entity;
     fn can_click(&self) -> bool {
         false
@@ -90,14 +91,14 @@ fn focus_blur_widget<N: NodeSet, W: Widget<N>>(
 
 fn build_widget<N: NodeSet, W: Widget<N>>(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    assets: Res<DefaultAssets>,
     mut q_widget: Query<(Entity, &mut W, &NodeSlot)>,
 ) {
     for (entity, mut widget, slot) in q_widget.iter_mut() {
         let widget_entity = widget.build(
             &mut commands,
             Vec2::new(slot.width, slot.height),
-            &asset_server,
+            &assets,
         );
 
         commands

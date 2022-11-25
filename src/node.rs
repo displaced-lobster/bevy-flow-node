@@ -10,6 +10,7 @@ use bevy::{
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
+    assets::DefaultAssets,
     connection::ConnectionEvent,
     cursor::CursorPosition,
     interactions::{Clickable, Clicked},
@@ -36,7 +37,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
         load_internal_asset!(
             app,
             NODE_SHADER_HANDLE,
-            "shaders/node.wgsl",
+            "assets/shaders/node.wgsl",
             Shader::from_wgsl
         );
         app.insert_resource(NodeConfig::default())
@@ -242,7 +243,7 @@ pub struct OutputNode;
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
+    assets: Res<DefaultAssets>,
     config: Res<NodeConfig>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -250,12 +251,12 @@ fn setup(
     commands.insert_resource(ActiveNode::default());
 
     let text_style_body = TextStyle {
-        font: asset_server.load("fonts/FiraMono-Medium.ttf"),
+        font: assets.font.clone(),
         font_size: config.font_size_body,
         color: Color::WHITE,
     };
     let text_style_title = TextStyle {
-        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+        font: assets.font_bold.clone(),
         font_size: config.font_size_title,
         color: Color::WHITE,
     };
