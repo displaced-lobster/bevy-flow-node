@@ -9,10 +9,12 @@ pub struct DefaultAssets {
 impl FromWorld for DefaultAssets {
     fn from_world(world: &mut World) -> Self {
         let font = world.get_resource_mut::<Assets<Font>>().unwrap().add(
-            Font::try_from_bytes(include_bytes!("assets/fonts/FiraMono-Medium.ttf").to_vec()).unwrap(),
+            Font::try_from_bytes(include_bytes!("assets/fonts/FiraMono-Medium.ttf").to_vec())
+                .unwrap(),
         );
         let font_bold = world.get_resource_mut::<Assets<Font>>().unwrap().add(
-            Font::try_from_bytes(include_bytes!("assets/fonts/FiraSans-Bold.ttf").to_vec()).unwrap(),
+            Font::try_from_bytes(include_bytes!("assets/fonts/FiraSans-Bold.ttf").to_vec())
+                .unwrap(),
         );
 
         Self { font, font_bold }

@@ -16,7 +16,8 @@ use crate::{
     interactions::{Clickable, Clicked},
 };
 
-const NODE_SHADER_HANDLE: HandleUntyped = HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
+const NODE_SHADER_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
 
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
