@@ -47,7 +47,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             .add_system(activate_node)
             .add_system(build_node::<N>)
             .add_system(delete_node::<N>)
-            .add_system(drag_node::<N>)
+            .add_system(drag_node::<N>.after(activate_node))
             .add_system(resolve_output_nodes::<N>)
             .add_system_set(
                 SystemSet::new()
@@ -211,6 +211,15 @@ pub(crate) struct NodeResources {
 pub struct NodeSlot {
     pub height: f32,
     pub width: f32,
+}
+
+impl NodeSlot {
+    pub fn new(height: f32) -> Self {
+        Self {
+            height,
+            ..default()
+        }
+    }
 }
 
 #[derive(Component)]
