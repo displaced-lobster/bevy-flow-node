@@ -38,10 +38,11 @@ pub struct TextInputWidget<N: NodeSet> {
 impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
     fn build(
         &mut self,
+        entity: Entity,
         commands: &mut Commands,
         area: Vec2,
         assets: &Res<DefaultAssets>,
-    ) -> Entity {
+    ) {
         let text_style_title = TextStyle {
             font: assets.font.clone(),
             font_size: 16.0,
@@ -50,18 +51,16 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
 
         self.size = area;
 
-        commands
-            .spawn(SpatialBundle::default())
-            .with_children(|parent| {
-                parent.spawn(SpriteBundle {
-                    sprite: Sprite {
-                        color: Color::WHITE,
-                        custom_size: Some(self.size),
-                        ..default()
-                    },
+        let child = commands
+            .spawn(SpriteBundle {
+                sprite: Sprite {
+                    color: Color::WHITE,
+                    custom_size: Some(self.size),
                     ..default()
-                });
-
+                },
+                ..default()
+            })
+            .with_children(|parent| {
                 let text_entity = parent
                     .spawn(Text2dBundle {
                         text: Text::from_section("", text_style_title),
@@ -73,7 +72,13 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
 
                 self.text_entity = Some(text_entity);
             })
-            .id()
+            .id();
+
+
+
+        commands
+            .entity(entity)
+            .push_children(&[child]);
     }
 
     fn blur(&mut self) {

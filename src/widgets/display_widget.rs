@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    text::{Text2dBounds, Text2dSize},
+};
 use std::{fmt::Display, marker::PhantomData};
 
 use crate::{
@@ -28,10 +31,11 @@ pub struct DisplayWidget {
 impl<N: NodeSet> Widget<N> for DisplayWidget {
     fn build(
         &mut self,
+        entity: Entity,
         commands: &mut Commands,
         area: Vec2,
         assets: &Res<DefaultAssets>,
-    ) -> Entity {
+    ) {
         let text_style_title = TextStyle {
             font: assets.font.clone(),
             font_size: 16.0,
@@ -41,12 +45,14 @@ impl<N: NodeSet> Widget<N> for DisplayWidget {
         self.size = area;
 
         commands
-            .spawn(Text2dBundle {
-                text: Text::from_section("", text_style_title),
-                transform: Transform::from_xyz(0.0, 0.0, 2.0),
-                ..default()
-            })
-            .id()
+            .entity(entity)
+            .insert((
+                Text::from_section("", text_style_title),
+                Text2dSize::default(),
+                Text2dBounds { size: Vec2::new(area.x / 2.0, area.y) },
+                Visibility::default(),
+                ComputedVisibility::default(),
+            ));
     }
 
     fn size(&self) -> Vec2 {
@@ -56,20 +62,15 @@ impl<N: NodeSet> Widget<N> for DisplayWidget {
 
 fn update_display_widget<N: NodeSet>(
     mut ev_node: EventReader<NodeEvent<N>>,
-    mut q_text: Query<(&Parent, &mut Text)>,
-    q_widget: Query<Entity, With<DisplayWidget>>,
+    mut q_text: Query<&mut Text, With<DisplayWidget>>,
 ) where
     N::NodeIO: Display,
 {
     for ev in ev_node.iter() {
         #[allow(irrefutable_let_patterns)]
         if let NodeEvent::Resolved(value) = ev {
-            for entity in q_widget.iter() {
-                for (parent, mut text) in q_text.iter_mut() {
-                    if parent.get() == entity {
-                        text.sections[0].value = value.to_string();
-                    }
-                }
+            for mut text in q_text.iter_mut() {
+                text.sections[0].value = value.to_string();
             }
         }
     }
