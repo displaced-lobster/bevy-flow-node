@@ -164,6 +164,7 @@ impl<N: NodeSet> NodeInput<N> {
 pub struct NodeOutput;
 
 pub enum NodeEvent<N: NodeSet> {
+    Destroyed,
     Resolved(N::NodeIO),
 }
 
@@ -501,6 +502,7 @@ fn delete_node<N: NodeSet>(
     mut active_node: ResMut<ActiveNode>,
     keys: Res<Input<KeyCode>>,
     node_res: Res<NodeResources>,
+    mut ev_node: EventWriter<NodeEvent<N>>,
     q_outputs: Query<(Entity, &Parent), With<NodeOutput>>,
     mut q_inputs: Query<(Entity, &mut NodeInput<N>)>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
@@ -528,6 +530,7 @@ fn delete_node<N: NodeSet>(
             commands.entity(entity).despawn_recursive();
             active_node.count -= 1;
             active_node.entity = None;
+            ev_node.send(NodeEvent::Destroyed);
         }
     }
 }

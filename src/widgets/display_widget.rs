@@ -67,7 +67,6 @@ fn update_display_widget<N: NodeSet>(
     N::NodeIO: Display,
 {
     for ev in ev_node.iter() {
-        #[allow(irrefutable_let_patterns)]
         if let NodeEvent::Resolved(value) = ev {
             for mut text in q_text.iter_mut() {
                 text.sections[0].value = value.to_string();
