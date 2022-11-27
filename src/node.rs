@@ -5,7 +5,6 @@ use bevy::{
     render::render_resource::{AsBindGroup, ShaderRef},
     sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
     text::Text2dBounds,
-    time::FixedTimestep,
 };
 use std::{collections::HashMap, marker::PhantomData};
 
@@ -49,12 +48,7 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             .add_system(build_node::<N>)
             .add_system(delete_node::<N>)
             .add_system(drag_node::<N>.after(activate_node))
-            .add_system(resolve_output_nodes::<N>)
-            .add_system_set(
-                SystemSet::new()
-                    .with_run_criteria(FixedTimestep::step(1.0))
-                    .with_system(reset_node_indices::<N>),
-            );
+            .add_system(resolve_output_nodes::<N>);
     }
 }
 
@@ -572,25 +566,5 @@ fn resolve_output_nodes<N: NodeSet>(
                 node.resolve(entity, &q_nodes, &q_inputs, &q_outputs),
             ));
         }
-    }
-}
-
-fn reset_node_indices<N: NodeSet>(
-    mut active_node: ResMut<ActiveNode>,
-    mut query: Query<&mut Transform, With<Node<N>>>,
-) {
-    if active_node.index_reset {
-        active_node.index = 0.0;
-
-        let mut transforms = query.iter_mut().collect::<Vec<_>>();
-
-        transforms.sort_by(|a, b| a.translation.z.partial_cmp(&b.translation.z).unwrap());
-
-        for transform in transforms.iter_mut() {
-            transform.translation.z = active_node.index;
-            active_node.index += 10.0;
-        }
-
-        active_node.index_reset = false;
     }
 }
