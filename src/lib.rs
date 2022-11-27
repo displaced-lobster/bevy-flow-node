@@ -13,6 +13,7 @@ pub mod widgets;
 
 pub use crate::{
     camera::PanCameraPlugin,
+    cursor::CursorCamera,
     menu::{NodeMenu, NodeMenuPlugin},
     node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet, NodeSlot, NodeTemplate},
     widget::{Widget, WidgetPlugin},

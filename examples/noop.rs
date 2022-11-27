@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
-use bevy_node_editor::{NodeInput, NodePlugins, NodeSet, NodeTemplate};
+use bevy_node_editor::{CursorCamera, NodeInput, NodePlugins, NodeSet, NodeTemplate};
 
 fn main() {
     App::new()
@@ -24,7 +24,7 @@ impl NodeSet for NoOpNodes {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), CursorCamera));
 
     commands.spawn(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(-200.0, 0.0),

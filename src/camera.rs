@@ -1,5 +1,7 @@
 use bevy::{input::mouse::MouseWheel, prelude::*};
 
+use crate::cursor::CursorCamera;
+
 pub struct PanCameraPlugin;
 
 impl Plugin for PanCameraPlugin {
@@ -14,7 +16,7 @@ impl Plugin for PanCameraPlugin {
 pub struct PanCamera;
 
 fn setup(mut commands: Commands) {
-    commands.spawn((Camera2dBundle::default(), PanCamera));
+    commands.spawn((Camera2dBundle::default(), CursorCamera, PanCamera));
 }
 
 fn move_camera(

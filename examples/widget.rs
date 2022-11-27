@@ -2,7 +2,7 @@ use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
+    CursorCamera, NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
 };
 use std::{
     collections::HashMap,
@@ -82,7 +82,7 @@ impl Into<String> for NodeString {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn((Camera2dBundle::default(), CursorCamera));
 
     let start_value = "Hello World!".to_string();
 

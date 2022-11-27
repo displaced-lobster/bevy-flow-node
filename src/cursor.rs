@@ -1,5 +1,8 @@
 use bevy::{prelude::*, render::camera::RenderTarget};
 
+#[derive(Component)]
+pub struct CursorCamera;
+
 pub struct CursorPlugin;
 
 impl Plugin for CursorPlugin {
@@ -26,7 +29,7 @@ impl CursorPosition {
 fn update_cursor_position(
     mut cursor: ResMut<CursorPosition>,
     wnds: Res<Windows>,
-    camera: Query<(&Camera, &GlobalTransform)>,
+    camera: Query<(&Camera, &GlobalTransform), With<CursorCamera>>,
 ) {
     let (camera, camera_transform) = camera.single();
     let wnd = if let RenderTarget::Window(id) = camera.target {
