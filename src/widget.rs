@@ -4,7 +4,8 @@ use std::marker::PhantomData;
 use crate::{
     assets::DefaultAssets,
     interactions::{Clickable, Clicked},
-    node::{NodeSet, NodeSlot},
+    node::NodeSet,
+    template::NodeSlot,
 };
 
 pub trait Widget<N: NodeSet>: Clone + Component {

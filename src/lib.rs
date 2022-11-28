@@ -8,6 +8,7 @@ pub mod cursor;
 pub mod interactions;
 pub mod menu;
 pub mod node;
+pub mod template;
 pub mod widget;
 pub mod widgets;
 
@@ -15,7 +16,8 @@ pub use crate::{
     camera::PanCameraPlugin,
     cursor::CursorCamera,
     menu::{NodeMenu, NodeMenuPlugin},
-    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet, NodeSlot, NodeTemplate},
+    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet},
+    template::{NodeSlot, NodeTemplate},
     widget::{Widget, WidgetPlugin},
 };
 
@@ -30,5 +32,6 @@ impl<N: NodeSet> PluginGroup for NodePlugins<N> {
             .add(cursor::CursorPlugin)
             .add(interactions::InteractionPlugin)
             .add(node::NodePlugin::<N>::default())
+            .add(template::NodeTemplatePlugin::<N>::default())
     }
 }
