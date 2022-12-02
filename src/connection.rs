@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::prelude::*;
+use bevy::{prelude::*, transform::TransformSystem};
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 use std::marker::PhantomData;
 
@@ -19,7 +19,10 @@ impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
             .add_system(break_connection::<N>)
-            .add_system(draw_connections::<N>)
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                draw_connections::<N>.after(TransformSystem::TransformPropagate),
+            )
             .add_system(draw_partial_connections::<N>)
             .add_system(complete_partial_connection::<N>)
             .add_system(convert_partial_connection::<N>)
