@@ -74,11 +74,7 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
             })
             .id();
 
-
-
-        commands
-            .entity(entity)
-            .push_children(&[child]);
+        commands.entity(entity).push_children(&[child]);
     }
 
     fn blur(&mut self) {

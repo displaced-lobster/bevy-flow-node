@@ -7,7 +7,10 @@ use std::marker::PhantomData;
 
 use crate::{
     interactions::Clickable,
-    node::{ActiveNode, Node, NodeConfig, NodeMaterial, NodeResources, NodeInput, NodeOutput, NodeSet, OutputNode},
+    node::{
+        ActiveNode, Node, NodeConfig, NodeInput, NodeMaterial, NodeOutput, NodeResources, NodeSet,
+        OutputNode,
+    },
 };
 
 #[derive(Default)]

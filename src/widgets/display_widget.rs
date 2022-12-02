@@ -44,15 +44,15 @@ impl<N: NodeSet> Widget<N> for DisplayWidget {
 
         self.size = area;
 
-        commands
-            .entity(entity)
-            .insert((
-                Text::from_section("", text_style_title),
-                Text2dSize::default(),
-                Text2dBounds { size: Vec2::new(area.x / 2.0, area.y) },
-                Visibility::default(),
-                ComputedVisibility::default(),
-            ));
+        commands.entity(entity).insert((
+            Text::from_section("", text_style_title),
+            Text2dSize::default(),
+            Text2dBounds {
+                size: Vec2::new(area.x / 2.0, area.y),
+            },
+            Visibility::default(),
+            ComputedVisibility::default(),
+        ));
     }
 
     fn size(&self) -> Vec2 {

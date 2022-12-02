@@ -10,7 +10,13 @@ use crate::{
 
 pub trait Widget<N: NodeSet>: Clone + Component {
     fn blur(&mut self) {}
-    fn build(&mut self, entity: Entity, commands: &mut Commands, area: Vec2, assets: &Res<DefaultAssets>);
+    fn build(
+        &mut self,
+        entity: Entity,
+        commands: &mut Commands,
+        area: Vec2,
+        assets: &Res<DefaultAssets>,
+    );
     fn can_click(&self) -> bool {
         false
     }
@@ -92,11 +98,14 @@ fn build_widget<N: NodeSet, W: Widget<N>>(
     mut q_widget: Query<(Entity, &mut W, &NodeSlot)>,
 ) {
     for (entity, mut widget, slot) in q_widget.iter_mut() {
-        widget.build(entity, &mut commands, Vec2::new(slot.width, slot.height), &assets);
+        widget.build(
+            entity,
+            &mut commands,
+            Vec2::new(slot.width, slot.height),
+            &assets,
+        );
 
-        commands
-            .entity(entity)
-            .remove::<NodeSlot>();
+        commands.entity(entity).remove::<NodeSlot>();
 
         if widget.can_click() {
             commands
@@ -114,9 +123,7 @@ fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget<N>>(
     for (entity, parent) in q_slot.iter() {
         if let Ok(node) = q_node.get(parent.get()) {
             if let Some(widget) = node.0.get_widget() {
-                commands
-                    .entity(entity)
-                    .insert(widget);
+                commands.entity(entity).insert(widget);
             }
         }
     }
