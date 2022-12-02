@@ -247,18 +247,19 @@ fn activate_node(
         let to_deactivate = active_node.entity;
 
         if let Clicked(Some(entity)) = ev {
-            if let Some(active_entity) = active_node.entity {
-                if active_entity == *entity {
-                    return;
-                }
-            }
-
             if let Ok((handle, mut transform, global_transform)) = q_node.get_mut(*entity) {
+                active_node.offset = global_transform.translation().truncate() - cursor.position();
+
+                if let Some(active_entity) = active_node.entity {
+                    if active_entity == *entity {
+                        return;
+                    }
+                }
+
                 transform.translation.z = active_node.index;
                 active_node.entity = Some(*entity);
                 active_node.index += 10.0;
                 active_node.index_reset = true;
-                active_node.offset = global_transform.translation().truncate() - cursor.position();
 
                 let mut material = materials.get_mut(handle).unwrap();
 
