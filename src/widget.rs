@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use crate::{
     assets::DefaultAssets,
     interactions::{Clickable, Clicked},
-    node::NodeSet,
+    node::{Node, NodeSet},
     template::NodeSlot,
 };
 
@@ -26,14 +26,15 @@ pub trait Widget<N: NodeSet>: Clone + Component {
     fn set_value(&mut self, _value: N::NodeIO) {}
 }
 
-pub trait ReceiveWidgetValue<N: NodeSet> {
-    fn receive_value(&mut self, value: N::NodeIO);
+pub trait SlotWidget<N: NodeSet, W: Widget<N>> {
+    fn get_widget(&self) -> Option<W>;
+    fn set_value(&mut self, _value: N::NodeIO) {}
 }
 
 #[derive(Default)]
-pub struct WidgetPlugin<N: NodeSet, W: Widget<N>>(PhantomData<(N, W)>);
+pub struct WidgetPlugin<N: NodeSet + SlotWidget<N, W>, W: Widget<N>>(PhantomData<(N, W)>);
 
-impl<N: NodeSet, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
+impl<N: NodeSet + SlotWidget<N, W>, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveWidget::<N, W>::default())
             .add_system(focus_blur_widget::<N, W>)
@@ -105,16 +106,17 @@ fn build_widget<N: NodeSet, W: Widget<N>>(
     }
 }
 
-fn slot_widget<N: NodeSet, W: Widget<N>>(
+fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget<N>>(
     mut commands: Commands,
-    q_widget: Query<(Entity, &W), Without<NodeSlot>>,
-    q_slot: Query<(Entity, &Parent), With<NodeSlot>>,
+    q_node: Query<&Node<N>>,
+    q_slot: Query<(Entity, &Parent), (With<NodeSlot>, Without<W>)>,
 ) {
-    for (entity, widget) in q_widget.iter() {
-        for (slot_entity, parent) in q_slot.iter() {
-            if parent.get() == entity {
-                commands.entity(slot_entity).insert(widget.clone());
-                commands.entity(entity).remove::<W>();
+    for (entity, parent) in q_slot.iter() {
+        if let Ok(node) = q_node.get(parent.get()) {
+            if let Some(widget) = node.0.get_widget() {
+                commands
+                    .entity(entity)
+                    .insert(widget);
             }
         }
     }

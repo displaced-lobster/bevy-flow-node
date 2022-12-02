@@ -21,7 +21,9 @@ impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
 }
 
 pub trait NodeMenu<N: NodeSet>: Default + Resource {
-    fn build(&self, commands: &mut Commands, node: &N);
+    fn build(&self, commands: &mut Commands, node: &N) {
+        commands.spawn((*node).clone().template());
+    }
     fn options(&self) -> Vec<(String, N)>;
 }
 

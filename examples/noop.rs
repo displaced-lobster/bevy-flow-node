@@ -21,6 +21,10 @@ impl NodeSet for NoOpNodes {
     fn resolve(&self, _inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {
         ()
     }
+
+    fn template(self) -> NodeTemplate<Self> {
+        NodeTemplate::default()
+    }
 }
 
 fn setup(mut commands: Commands) {

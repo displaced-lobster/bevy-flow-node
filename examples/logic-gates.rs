@@ -31,8 +31,31 @@ enum LogicNodes {
     Result,
 }
 
-impl Into<NodeTemplate<LogicNodes>> for LogicNodes {
-    fn into(self) -> NodeTemplate<LogicNodes> {
+impl NodeSet for LogicNodes {
+    type NodeIO = bool;
+
+    fn resolve(&self, inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {
+        match self {
+            LogicNodes::True => true,
+            LogicNodes::False => false,
+            LogicNodes::And => inputs["a"] && inputs["b"],
+            LogicNodes::Or => inputs["a"] || inputs["b"],
+            LogicNodes::Not => !inputs["a"],
+            LogicNodes::Xor => inputs["a"] ^ inputs["b"],
+            LogicNodes::Nand => !(inputs["a"] && inputs["b"]),
+            LogicNodes::Nor => !(inputs["a"] || inputs["b"]),
+            LogicNodes::Xnor => !(inputs["a"] ^ inputs["b"]),
+            LogicNodes::Result => {
+                let r = inputs["a"];
+
+                println!("{}", r);
+
+                r
+            }
+        }
+    }
+
+    fn template(self) -> NodeTemplate<Self> {
         match self {
             Self::True => NodeTemplate {
                 title: "True".to_string(),
@@ -105,41 +128,10 @@ impl Into<NodeTemplate<LogicNodes>> for LogicNodes {
     }
 }
 
-impl NodeSet for LogicNodes {
-    type NodeIO = bool;
-
-    fn resolve(&self, inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {
-        match self {
-            LogicNodes::True => true,
-            LogicNodes::False => false,
-            LogicNodes::And => inputs["a"] && inputs["b"],
-            LogicNodes::Or => inputs["a"] || inputs["b"],
-            LogicNodes::Not => !inputs["a"],
-            LogicNodes::Xor => inputs["a"] ^ inputs["b"],
-            LogicNodes::Nand => !(inputs["a"] && inputs["b"]),
-            LogicNodes::Nor => !(inputs["a"] || inputs["b"]),
-            LogicNodes::Xnor => !(inputs["a"] ^ inputs["b"]),
-            LogicNodes::Result => {
-                let r = inputs["a"];
-
-                println!("{}", r);
-
-                r
-            }
-        }
-    }
-}
-
 #[derive(Default, Resource)]
 struct LogicMenu;
 
 impl NodeMenu<LogicNodes> for LogicMenu {
-    fn build(&self, commands: &mut Commands, node: &LogicNodes) {
-        let template: NodeTemplate<LogicNodes> = (*node).into();
-
-        commands.spawn(template);
-    }
-
     fn options(&self) -> Vec<(String, LogicNodes)> {
         vec![
             ("True".to_string(), LogicNodes::True),
@@ -157,7 +149,5 @@ impl NodeMenu<LogicNodes> for LogicMenu {
 }
 
 fn setup(mut commands: Commands) {
-    let template: NodeTemplate<LogicNodes> = LogicNodes::Result.into();
-
-    commands.spawn(template);
+    commands.spawn(LogicNodes::Result.template());
 }

@@ -1,8 +1,7 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    CursorCamera, NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
+    CursorCamera, NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget
 };
 use std::{
     collections::HashMap,
@@ -46,10 +45,51 @@ impl NodeSet for IONodes {
             IONodes::Output => inputs["input"].clone(),
         }
     }
+
+    fn template(self) -> NodeTemplate<Self> {
+        match self {
+            IONodes::Input(_) => NodeTemplate {
+                title: "Input".to_string(),
+                output_label: Some("output".to_string()),
+                node: self,
+                slot: Some(NodeSlot {
+                    height: 20.0,
+                    ..default()
+                }),
+                ..default()
+            },
+            IONodes::Output => NodeTemplate {
+                title: "Output".to_string(),
+                inputs: Some(vec![NodeInput::from_label("input")]),
+                node: self,
+                slot: Some(NodeSlot {
+                    height: 20.0,
+                    ..default()
+                }),
+                ..default()
+            },
+        }
+    }
 }
 
-impl ReceiveWidgetValue<IONodes> for IONodes {
-    fn receive_value(&mut self, value: NodeString) {
+impl SlotWidget<Self, DisplayWidget> for IONodes {
+    fn get_widget(&self) -> Option<DisplayWidget> {
+        match self {
+            IONodes::Output => Some(DisplayWidget::default()),
+            _ => None,
+        }
+    }
+}
+
+impl SlotWidget<Self, TextInputWidget<Self>> for IONodes {
+    fn get_widget(&self) -> Option<TextInputWidget<Self>> {
+        match self {
+            IONodes::Input(_) => Some(TextInputWidget::default()),
+            _ => None,
+        }
+    }
+
+    fn set_value(&mut self, value: NodeString) {
         match self {
             IONodes::Input(s) => *s = value.to_string(),
             _ => {}
@@ -85,40 +125,12 @@ fn setup(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), CursorCamera));
 
     let start_value = "Hello World!".to_string();
+    let mut input_template = IONodes::Input(start_value).template();
+    let mut output_template = IONodes::Output.template();
 
-    commands.spawn((
-        SpatialBundle::default(),
-        NodeTemplate::<IONodes> {
-            position: Vec2::new(-220.0, 0.0),
-            title: "Input".to_string(),
-            output_label: Some("output".to_string()),
-            node: IONodes::Input(start_value.clone()),
-            slot: Some(NodeSlot {
-                height: 20.0,
-                ..default()
-            }),
-            ..default()
-        },
-        TextInputWidget::<IONodes> {
-            size: Vec2::new(200.0, 20.0),
-            value: NodeString(start_value),
-            ..default()
-        },
-    ));
+    input_template.position.x = -220.0;
+    output_template.position.x = 220.0;
 
-    commands.spawn((
-        SpatialBundle::default(),
-        NodeTemplate::<IONodes> {
-            position: Vec2::new(220.0, 0.0),
-            title: "Output".to_string(),
-            inputs: Some(vec![NodeInput::from_label("input")]),
-            node: IONodes::Output,
-            slot: Some(NodeSlot {
-                height: 20.0,
-                ..default()
-            }),
-            ..default()
-        },
-        DisplayWidget::default(),
-    ));
+    commands.spawn(input_template);
+    commands.spawn(output_template);
 }

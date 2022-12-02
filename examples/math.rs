@@ -1,9 +1,8 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widget::ReceiveWidgetValue,
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
     NodeInput, NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
-    PanCameraPlugin,
+    PanCameraPlugin, SlotWidget,
 };
 use std::collections::HashMap;
 
@@ -25,31 +24,6 @@ fn main() {
 struct MathMenu;
 
 impl NodeMenu<MathNodes> for MathMenu {
-    fn build(&self, commands: &mut Commands, node: &MathNodes) {
-        let template: NodeTemplate<MathNodes> = (*node).clone().into();
-
-        let entity = commands.spawn(template).id();
-
-        match node {
-            MathNodes::Value(_) => {
-                commands
-                    .entity(entity)
-                    .insert(TextInputWidget::<MathNodes> {
-                        size: Vec2::new(100.0, 20.0),
-                        value: MathIO::new(0.0),
-                        ..default()
-                    });
-            }
-            MathNodes::Output => {
-                commands.entity(entity).insert(DisplayWidget {
-                    size: Vec2::new(100.0, 20.0),
-                    ..default()
-                });
-            }
-            _ => {}
-        }
-    }
-
     fn options(&self) -> Vec<(String, MathNodes)> {
         vec![
             ("Value".to_string(), MathNodes::Value(MathIO::default())),
@@ -164,19 +138,8 @@ impl NodeSet for MathNodes {
             MathNodes::Value(value) => value.clone(),
         }
     }
-}
 
-impl ReceiveWidgetValue<MathNodes> for MathNodes {
-    fn receive_value(&mut self, value: MathIO) {
-        match self {
-            MathNodes::Value(io) => *io = value,
-            _ => {}
-        }
-    }
-}
-
-impl Into<NodeTemplate<MathNodes>> for MathNodes {
-    fn into(self) -> NodeTemplate<MathNodes> {
+    fn template(self) -> NodeTemplate<Self> {
         match self {
             Self::Add => NodeTemplate {
                 title: "Add".to_string(),
@@ -216,14 +179,31 @@ impl Into<NodeTemplate<MathNodes>> for MathNodes {
     }
 }
 
-fn setup(mut commands: Commands) {
-    let template: NodeTemplate<MathNodes> = MathNodes::Output.into();
+impl SlotWidget<Self, DisplayWidget> for MathNodes {
+    fn get_widget(&self) -> Option<DisplayWidget> {
+        match self {
+            MathNodes::Output => Some(DisplayWidget::default()),
+            _ => None,
+        }
+    }
+}
 
-    commands.spawn((
-        template,
-        DisplayWidget {
-            size: Vec2::new(100.0, 20.0),
-            ..default()
-        },
-    ));
+impl SlotWidget<Self, TextInputWidget<Self>> for MathNodes {
+    fn get_widget(&self) -> Option<TextInputWidget<Self>> {
+        match self {
+            MathNodes::Value(_) => Some(TextInputWidget::default()),
+            _ => None,
+        }
+    }
+
+    fn set_value(&mut self, value: MathIO) {
+        match self {
+            MathNodes::Value(v) => *v = value,
+            _ => {}
+        }
+    }
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn(MathNodes::Output.template());
 }

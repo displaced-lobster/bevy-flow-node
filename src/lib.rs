@@ -18,7 +18,7 @@ pub use crate::{
     menu::{NodeMenu, NodeMenuPlugin},
     node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet},
     template::{NodeSlot, NodeTemplate},
-    widget::{Widget, WidgetPlugin},
+    widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]

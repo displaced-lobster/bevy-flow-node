@@ -8,7 +8,7 @@ use crate::{
     assets::DefaultAssets,
     connection::ConnectionEvent,
     node::{Node, NodeSet},
-    widget::{ReceiveWidgetValue, Widget, WidgetPlugin},
+    widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
@@ -16,7 +16,7 @@ pub struct TextInputWidgetPlugin<N: NodeSet>(PhantomData<N>);
 
 impl<N: NodeSet> Plugin for TextInputWidgetPlugin<N>
 where
-    N: ReceiveWidgetValue<N>,
+    N: SlotWidget<N, TextInputWidget<N>>,
     N::NodeIO: AddAssign<char> + Into<String> + SubAssign<char>,
 {
     fn build(&self, app: &mut App) {
@@ -143,7 +143,7 @@ fn text_widget_value<N: NodeSet>(
     mut q_widget: Query<(&Parent, &mut TextInputWidget<N>)>,
     mut q_text: Query<&mut Text>,
 ) where
-    N: ReceiveWidgetValue<N>,
+    N: SlotWidget<N, TextInputWidget<N>>,
     N::NodeIO: Into<String>,
 {
     for (parent, mut widget) in q_widget.iter_mut() {
@@ -157,7 +157,7 @@ fn text_widget_value<N: NodeSet>(
             }
 
             if let Ok(mut node) = q_node.get_mut(parent.get()) {
-                (*node).receive_value(widget.get_value());
+                (*node).set_value(widget.get_value());
                 ev_conn.send(ConnectionEvent::Propagate);
             }
         }

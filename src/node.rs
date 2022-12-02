@@ -12,6 +12,7 @@ use crate::{
     connection::ConnectionEvent,
     cursor::CursorPosition,
     interactions::Clicked,
+    template::NodeTemplate,
 };
 
 const NODE_SHADER_HANDLE: HandleUntyped =
@@ -21,6 +22,7 @@ pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
 
     fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO;
+    fn template(self) -> NodeTemplate<Self>;
 }
 
 pub struct NodePlugin<N: NodeSet>(PhantomData<N>);

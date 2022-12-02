@@ -7,13 +7,13 @@ use std::{fmt::Display, marker::PhantomData};
 use crate::{
     assets::DefaultAssets,
     node::{NodeEvent, NodeSet},
-    widget::{Widget, WidgetPlugin},
+    widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct DisplayWidgetPlugin<N: NodeSet>(PhantomData<N>);
+pub struct DisplayWidgetPlugin<N: NodeSet + SlotWidget<N, DisplayWidget>>(PhantomData<N>);
 
-impl<N: NodeSet> Plugin for DisplayWidgetPlugin<N>
+impl<N: NodeSet + SlotWidget<N, DisplayWidget>> Plugin for DisplayWidgetPlugin<N>
 where
     N::NodeIO: Display,
 {
