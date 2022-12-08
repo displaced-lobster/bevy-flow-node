@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
     CursorCamera, NodeInput, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget,
 };
 use std::{
@@ -16,7 +16,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<IONodes>::default())
         .add_plugin(DisplayWidgetPlugin::<IONodes>::default())
-        .add_plugin(TextInputWidgetPlugin::<IONodes>::default())
+        .add_plugin(InputWidgetPlugin::<IONodes>::default())
         .add_startup_system(setup)
         .run();
 }
@@ -85,10 +85,10 @@ impl SlotWidget<Self, DisplayWidget> for IONodes {
     }
 }
 
-impl SlotWidget<Self, TextInputWidget<Self>> for IONodes {
-    fn get_widget(&self) -> Option<TextInputWidget<Self>> {
+impl SlotWidget<Self, InputWidget<Self>> for IONodes {
+    fn get_widget(&self) -> Option<InputWidget<Self>> {
         match self {
-            IONodes::Input(_) => Some(TextInputWidget::default()),
+            IONodes::Input(_) => Some(InputWidget::default()),
             _ => None,
         }
     }

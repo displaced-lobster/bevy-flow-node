@@ -1,5 +1,5 @@
 mod display_widget;
-mod text_input_widget;
+mod input_widget;
 
 pub use display_widget::{DisplayWidget, DisplayWidgetPlugin};
-pub use text_input_widget::{TextInputWidget, TextInputWidgetPlugin};
+pub use input_widget::{InputWidget, InputWidgetPlugin};

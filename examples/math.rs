@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
     NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
     PanCameraPlugin, SlotWidget,
 };
@@ -15,7 +15,7 @@ fn main() {
         .add_plugin(PanCameraPlugin)
         .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
         .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
-        .add_plugin(TextInputWidgetPlugin::<MathNodes>::default())
+        .add_plugin(InputWidgetPlugin::<MathNodes>::default())
         .add_startup_system(setup)
         .run();
 }
@@ -192,10 +192,10 @@ impl SlotWidget<Self, DisplayWidget> for MathNodes {
     }
 }
 
-impl SlotWidget<Self, TextInputWidget<Self>> for MathNodes {
-    fn get_widget(&self) -> Option<TextInputWidget<Self>> {
+impl SlotWidget<Self, InputWidget<Self>> for MathNodes {
+    fn get_widget(&self) -> Option<InputWidget<Self>> {
         match self {
-            MathNodes::Value(_) => Some(TextInputWidget::default()),
+            MathNodes::Value(_) => Some(InputWidget::default()),
             _ => None,
         }
     }

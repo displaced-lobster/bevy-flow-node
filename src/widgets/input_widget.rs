@@ -12,22 +12,22 @@ use crate::{
 };
 
 #[derive(Default)]
-pub struct TextInputWidgetPlugin<N: NodeSet>(PhantomData<N>);
+pub struct InputWidgetPlugin<N: NodeSet>(PhantomData<N>);
 
-impl<N: NodeSet> Plugin for TextInputWidgetPlugin<N>
+impl<N: NodeSet> Plugin for InputWidgetPlugin<N>
 where
-    N: SlotWidget<N, TextInputWidget<N>>,
+    N: SlotWidget<N, InputWidget<N>>,
     N::NodeIO: AddAssign<char> + Into<String> + SubAssign<char>,
 {
     fn build(&self, app: &mut App) {
-        app.add_plugin(WidgetPlugin::<N, TextInputWidget<N>>::default())
-            .add_system(text_widget_input::<N>)
-            .add_system(text_widget_value::<N>);
+        app.add_plugin(WidgetPlugin::<N, InputWidget<N>>::default())
+            .add_system(input_widget_input::<N>)
+            .add_system(input_widget_value::<N>);
     }
 }
 
 #[derive(Clone, Component, Default)]
-pub struct TextInputWidget<N: NodeSet> {
+pub struct InputWidget<N: NodeSet> {
     pub active: bool,
     pub dirty: bool,
     pub size: Vec2,
@@ -35,7 +35,7 @@ pub struct TextInputWidget<N: NodeSet> {
     pub value: N::NodeIO,
 }
 
-impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
+impl<N: NodeSet> Widget<N> for InputWidget<N> {
     fn build(
         &mut self,
         entity: Entity,
@@ -110,9 +110,9 @@ impl<N: NodeSet> Widget<N> for TextInputWidget<N> {
     }
 }
 
-fn text_widget_input<N: NodeSet>(
+fn input_widget_input<N: NodeSet>(
     mut ev_char: EventReader<ReceivedCharacter>,
-    mut query: Query<&mut TextInputWidget<N>>,
+    mut query: Query<&mut InputWidget<N>>,
 ) where
     N::NodeIO: AddAssign<char> + SubAssign<char>,
 {
@@ -133,13 +133,13 @@ fn text_widget_input<N: NodeSet>(
     }
 }
 
-fn text_widget_value<N: NodeSet>(
+fn input_widget_value<N: NodeSet>(
     mut ev_conn: EventWriter<ConnectionEvent>,
     mut q_node: Query<&mut Node<N>>,
-    mut q_widget: Query<(&Parent, &mut TextInputWidget<N>)>,
+    mut q_widget: Query<(&Parent, &mut InputWidget<N>)>,
     mut q_text: Query<&mut Text>,
 ) where
-    N: SlotWidget<N, TextInputWidget<N>>,
+    N: SlotWidget<N, InputWidget<N>>,
     N::NodeIO: Into<String>,
 {
     for (parent, mut widget) in q_widget.iter_mut() {
