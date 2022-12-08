@@ -1,8 +1,16 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, NumberInput},
-    NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
-    PanCameraPlugin, SlotWidget,
+    NodeInput,
+    NodeMenu,
+    NodeMenuPlugin,
+    NodeOutput,
+    NodePlugins,
+    NodeSet,
+    NodeSlot,
+    NodeTemplate,
+    PanCameraPlugin,
+    SlotWidget,
 };
 use std::collections::HashMap;
 

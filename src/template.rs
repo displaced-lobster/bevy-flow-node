@@ -8,7 +8,14 @@ use std::marker::PhantomData;
 use crate::{
     interactions::Clickable,
     node::{
-        ActiveNode, Node, NodeConfig, NodeInput, NodeMaterial, NodeOutput, NodeResources, NodeSet,
+        ActiveNode,
+        Node,
+        NodeConfig,
+        NodeInput,
+        NodeMaterial,
+        NodeOutput,
+        NodeResources,
+        NodeSet,
         OutputNode,
     },
 };

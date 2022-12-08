@@ -8,8 +8,11 @@ use bevy::{
 use std::{collections::HashMap, marker::PhantomData};
 
 use crate::{
-    assets::DefaultAssets, connection::ConnectionEvent, cursor::CursorPosition,
-    interactions::Clicked, template::NodeTemplate,
+    assets::DefaultAssets,
+    connection::ConnectionEvent,
+    cursor::CursorPosition,
+    interactions::Clicked,
+    template::NodeTemplate,
 };
 
 const NODE_SHADER_HANDLE: HandleUntyped =

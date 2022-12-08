@@ -1,7 +1,13 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
 use bevy_node_editor::{
-    NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeTemplate,
+    NodeInput,
+    NodeMenu,
+    NodeMenuPlugin,
+    NodeOutput,
+    NodePlugins,
+    NodeSet,
+    NodeTemplate,
     PanCameraPlugin,
 };
 
