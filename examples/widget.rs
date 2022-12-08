@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, InputWidgetValue},
     CursorCamera, NodeInput, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget,
 };
 use std::{
@@ -98,6 +98,20 @@ impl SlotWidget<Self, InputWidget<Self>> for IONodes {
             IONodes::Input(s) => *s = value.to_string(),
             _ => {}
         }
+    }
+}
+
+impl InputWidgetValue for NodeString {
+    fn backspace(&mut self) {
+        self.0.pop();
+    }
+
+    fn on_input(&mut self, c: char) {
+        self.0.push(c);
+    }
+
+    fn peek(&self) -> String {
+        self.0.clone()
     }
 }
 

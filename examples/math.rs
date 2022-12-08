@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, InputWidgetValue},
     NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
     PanCameraPlugin, SlotWidget,
 };
@@ -52,22 +52,8 @@ impl MathIO {
     }
 }
 
-impl std::ops::AddAssign<char> for MathIO {
-    fn add_assign(&mut self, rhs: char) {
-        if rhs.is_digit(10) {
-            self.s_value.push(rhs);
-
-            if let Ok(value) = self.s_value.parse::<f32>() {
-                self.value = value;
-            }
-        } else if rhs == '.' && !self.s_value.chars().any(|c| c == '.') {
-            self.s_value.push(rhs);
-        }
-    }
-}
-
-impl std::ops::SubAssign<char> for MathIO {
-    fn sub_assign(&mut self, _rhs: char) {
+impl InputWidgetValue for MathIO {
+    fn backspace(&mut self) {
         self.s_value.pop();
 
         if let Ok(value) = self.s_value.parse() {
@@ -75,6 +61,22 @@ impl std::ops::SubAssign<char> for MathIO {
         } else {
             self.value = 0.0;
         }
+    }
+
+    fn on_input(&mut self, c: char) {
+        if c.is_digit(10) {
+            self.s_value.push(c);
+
+            if let Ok(value) = self.s_value.parse::<f32>() {
+                self.value = value;
+            }
+        } else if c == '.' && !self.s_value.chars().any(|c| c == '.') {
+            self.s_value.push(c);
+        }
+    }
+
+    fn peek(&self) -> String {
+        self.s_value.clone()
     }
 }
 

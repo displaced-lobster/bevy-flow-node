@@ -1,8 +1,5 @@
 use bevy::{prelude::*, text::Text2dBounds};
-use std::{
-    marker::PhantomData,
-    ops::{AddAssign, SubAssign},
-};
+use std::marker::PhantomData;
 
 use crate::{
     assets::DefaultAssets,
@@ -11,13 +8,19 @@ use crate::{
     widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
+pub trait InputWidgetValue {
+    fn backspace(&mut self);
+    fn on_input(&mut self, c: char);
+    fn peek(&self) -> String;
+}
+
 #[derive(Default)]
 pub struct InputWidgetPlugin<N: NodeSet>(PhantomData<N>);
 
 impl<N: NodeSet> Plugin for InputWidgetPlugin<N>
 where
     N: SlotWidget<N, InputWidget<N>>,
-    N::NodeIO: AddAssign<char> + Into<String> + SubAssign<char>,
+    N::NodeIO: InputWidgetValue,
 {
     fn build(&self, app: &mut App) {
         app.add_plugin(WidgetPlugin::<N, InputWidget<N>>::default())
@@ -114,7 +117,7 @@ fn input_widget_input<N: NodeSet>(
     mut ev_char: EventReader<ReceivedCharacter>,
     mut query: Query<&mut InputWidget<N>>,
 ) where
-    N::NodeIO: AddAssign<char> + SubAssign<char>,
+    N::NodeIO: InputWidgetValue,
 {
     const BACKSPACE: char = '\u{0008}';
 
@@ -124,9 +127,9 @@ fn input_widget_input<N: NodeSet>(
                 widget.dirty = true;
 
                 if ev.char.is_ascii_graphic() {
-                    widget.value += ev.char;
+                    widget.value.on_input(ev.char);
                 } else if ev.char == BACKSPACE {
-                    widget.value -= ev.char;
+                    widget.value.backspace();
                 }
             }
         }
@@ -140,7 +143,7 @@ fn input_widget_value<N: NodeSet>(
     mut q_text: Query<&mut Text>,
 ) where
     N: SlotWidget<N, InputWidget<N>>,
-    N::NodeIO: Into<String>,
+    N::NodeIO: InputWidgetValue,
 {
     for (parent, mut widget) in q_widget.iter_mut() {
         if widget.dirty() {
@@ -148,7 +151,7 @@ fn input_widget_value<N: NodeSet>(
 
             if let Some(entity) = widget.text_entity {
                 if let Ok(mut text) = q_text.get_mut(entity) {
-                    text.sections[0].value = widget.get_value().into();
+                    text.sections[0].value = widget.get_value().peek();
                 }
             }
 
