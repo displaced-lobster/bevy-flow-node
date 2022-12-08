@@ -28,7 +28,9 @@ pub struct DisplayWidget {
     pub size: Vec2,
 }
 
-impl<N: NodeSet> Widget<N> for DisplayWidget {
+impl Widget for DisplayWidget {
+    type WidgetValue = String;
+
     fn build(
         &mut self,
         entity: Entity,

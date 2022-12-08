@@ -8,7 +8,9 @@ use crate::{
     template::NodeSlot,
 };
 
-pub trait Widget<N: NodeSet>: Clone + Component {
+pub trait Widget: Clone + Component {
+    type WidgetValue;
+
     fn blur(&mut self) {}
     fn build(
         &mut self,
@@ -26,21 +28,21 @@ pub trait Widget<N: NodeSet>: Clone + Component {
     }
     fn focus(&mut self) {}
     fn size(&self) -> Vec2;
-    fn get_value(&self) -> N::NodeIO {
-        N::NodeIO::default()
+    fn get_value(&self) -> Option<Self::WidgetValue> {
+        None
     }
-    fn set_value(&mut self, _value: N::NodeIO) {}
+    fn set_value(&mut self, _value: Self::WidgetValue) {}
 }
 
-pub trait SlotWidget<N: NodeSet, W: Widget<N>> {
+pub trait SlotWidget<N: NodeSet, W: Widget> {
     fn get_widget(&self) -> Option<W>;
-    fn set_value(&mut self, _value: N::NodeIO) {}
+    fn set_value(&mut self, _value: W::WidgetValue) {}
 }
 
 #[derive(Default)]
-pub struct WidgetPlugin<N: NodeSet + SlotWidget<N, W>, W: Widget<N>>(PhantomData<(N, W)>);
+pub struct WidgetPlugin<N: NodeSet + SlotWidget<N, W>, W: Widget>(PhantomData<(N, W)>);
 
-impl<N: NodeSet + SlotWidget<N, W>, W: Widget<N>> Plugin for WidgetPlugin<N, W> {
+impl<N: NodeSet + SlotWidget<N, W>, W: Widget> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveWidget::<N, W>::default())
             .add_system(focus_blur_widget::<N, W>)
@@ -50,12 +52,12 @@ impl<N: NodeSet + SlotWidget<N, W>, W: Widget<N>> Plugin for WidgetPlugin<N, W> 
 }
 
 #[derive(Resource)]
-struct ActiveWidget<N: NodeSet, W: Widget<N>> {
+struct ActiveWidget<N: NodeSet, W: Widget> {
     entity: Option<Entity>,
     _phantom: PhantomData<(N, W)>,
 }
 
-impl<N: NodeSet, W: Widget<N>> Default for ActiveWidget<N, W> {
+impl<N: NodeSet, W: Widget> Default for ActiveWidget<N, W> {
     fn default() -> Self {
         Self {
             entity: None,
@@ -64,7 +66,7 @@ impl<N: NodeSet, W: Widget<N>> Default for ActiveWidget<N, W> {
     }
 }
 
-fn focus_blur_widget<N: NodeSet, W: Widget<N>>(
+fn focus_blur_widget<N: NodeSet, W: Widget>(
     mut active_widget: ResMut<ActiveWidget<N, W>>,
     mut ev_click: EventReader<Clicked>,
     mut query: Query<(Entity, &mut W), With<Clickable>>,
@@ -92,7 +94,7 @@ fn focus_blur_widget<N: NodeSet, W: Widget<N>>(
     }
 }
 
-fn build_widget<N: NodeSet, W: Widget<N>>(
+fn build_widget<N: NodeSet, W: Widget>(
     mut commands: Commands,
     assets: Res<DefaultAssets>,
     mut q_widget: Query<(Entity, &mut W, &NodeSlot)>,
@@ -115,7 +117,7 @@ fn build_widget<N: NodeSet, W: Widget<N>>(
     }
 }
 
-fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget<N>>(
+fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget>(
     mut commands: Commands,
     q_node: Query<&Node<N>>,
     q_slot: Query<(Entity, &Parent), (With<NodeSlot>, Without<W>)>,

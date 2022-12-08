@@ -1,13 +1,9 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, InputWidgetValue},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
     CursorCamera, NodeInput, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget,
 };
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    ops::{AddAssign, SubAssign},
-};
+use std::collections::HashMap;
 
 fn main() {
     App::new()
@@ -16,13 +12,10 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(NodePlugins::<IONodes>::default())
         .add_plugin(DisplayWidgetPlugin::<IONodes>::default())
-        .add_plugin(InputWidgetPlugin::<IONodes>::default())
+        .add_plugin(InputWidgetPlugin::<IONodes, String>::default())
         .add_startup_system(setup)
         .run();
 }
-
-#[derive(Clone, Default)]
-struct NodeString(String);
 
 #[derive(Clone)]
 enum IONodes {
@@ -37,7 +30,7 @@ impl Default for IONodes {
 }
 
 impl NodeSet for IONodes {
-    type NodeIO = NodeString;
+    type NodeIO = String;
 
     fn resolve(
         &self,
@@ -45,7 +38,7 @@ impl NodeSet for IONodes {
         _output: Option<&str>,
     ) -> Self::NodeIO {
         match self {
-            IONodes::Input(s) => NodeString(s.clone()),
+            IONodes::Input(s) => s.clone(),
             IONodes::Output => inputs["input"].clone(),
         }
     }
@@ -85,57 +78,19 @@ impl SlotWidget<Self, DisplayWidget> for IONodes {
     }
 }
 
-impl SlotWidget<Self, InputWidget<Self>> for IONodes {
-    fn get_widget(&self) -> Option<InputWidget<Self>> {
+impl SlotWidget<Self, InputWidget<String>> for IONodes {
+    fn get_widget(&self) -> Option<InputWidget<String>> {
         match self {
             IONodes::Input(_) => Some(InputWidget::default()),
             _ => None,
         }
     }
 
-    fn set_value(&mut self, value: NodeString) {
+    fn set_value(&mut self, value: String) {
         match self {
-            IONodes::Input(s) => *s = value.to_string(),
+            IONodes::Input(s) => *s = value,
             _ => {}
         }
-    }
-}
-
-impl InputWidgetValue for NodeString {
-    fn backspace(&mut self) {
-        self.0.pop();
-    }
-
-    fn on_input(&mut self, c: char) {
-        self.0.push(c);
-    }
-
-    fn peek(&self) -> String {
-        self.0.clone()
-    }
-}
-
-impl AddAssign<char> for NodeString {
-    fn add_assign(&mut self, other: char) {
-        self.0.push(other);
-    }
-}
-
-impl SubAssign<char> for NodeString {
-    fn sub_assign(&mut self, _other: char) {
-        self.0.pop();
-    }
-}
-
-impl Display for NodeString {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Into<String> for NodeString {
-    fn into(self) -> String {
-        self.0.clone()
     }
 }
 

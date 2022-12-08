@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
-    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, InputWidgetValue},
+    widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, NumberInput},
     NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
     PanCameraPlugin, SlotWidget,
 };
@@ -15,7 +15,7 @@ fn main() {
         .add_plugin(PanCameraPlugin)
         .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
         .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
-        .add_plugin(InputWidgetPlugin::<MathNodes>::default())
+        .add_plugin(InputWidgetPlugin::<MathNodes, NumberInput>::default())
         .add_startup_system(setup)
         .run();
 }
@@ -26,78 +26,14 @@ struct MathMenu;
 impl NodeMenu<MathNodes> for MathMenu {
     fn options(&self) -> Vec<(String, MathNodes)> {
         vec![
-            ("Value".to_string(), MathNodes::Value(MathIO::default())),
+            (
+                "Value".to_string(),
+                MathNodes::Value(NumberInput::default()),
+            ),
             ("Add".to_string(), MathNodes::Add),
             ("Multiply".to_string(), MathNodes::Mult),
             ("Output".to_string(), MathNodes::Output),
         ]
-    }
-}
-
-#[derive(Clone, Default)]
-struct MathIO {
-    s_value: String,
-    value: f32,
-}
-
-impl MathIO {
-    fn new(value: f32) -> Self {
-        let s_value = if value != 0.0 {
-            value.to_string()
-        } else {
-            "".to_string()
-        };
-
-        Self { s_value, value }
-    }
-}
-
-impl InputWidgetValue for MathIO {
-    fn backspace(&mut self) {
-        self.s_value.pop();
-
-        if let Ok(value) = self.s_value.parse() {
-            self.value = value;
-        } else {
-            self.value = 0.0;
-        }
-    }
-
-    fn on_input(&mut self, c: char) {
-        if c.is_digit(10) {
-            self.s_value.push(c);
-
-            if let Ok(value) = self.s_value.parse::<f32>() {
-                self.value = value;
-            }
-        } else if c == '.' && !self.s_value.chars().any(|c| c == '.') {
-            self.s_value.push(c);
-        }
-    }
-
-    fn peek(&self) -> String {
-        self.s_value.clone()
-    }
-}
-
-impl std::fmt::Display for MathIO {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.s_value)
-    }
-}
-
-impl From<f32> for MathIO {
-    fn from(f: f32) -> Self {
-        Self {
-            value: f,
-            ..default()
-        }
-    }
-}
-
-impl Into<String> for MathIO {
-    fn into(self) -> String {
-        self.to_string()
     }
 }
 
@@ -106,17 +42,17 @@ enum MathNodes {
     Add,
     Mult,
     Output,
-    Value(MathIO),
+    Value(NumberInput),
 }
 
 impl Default for MathNodes {
     fn default() -> Self {
-        Self::Value(MathIO::default())
+        Self::Value(NumberInput::default())
     }
 }
 
 impl NodeSet for MathNodes {
-    type NodeIO = MathIO;
+    type NodeIO = f32;
 
     fn resolve(
         &self,
@@ -125,23 +61,19 @@ impl NodeSet for MathNodes {
     ) -> Self::NodeIO {
         match self {
             MathNodes::Add => {
-                let a: f32 = inputs["a"].value;
-                let b: f32 = inputs["b"].value;
+                let a: f32 = inputs["a"];
+                let b: f32 = inputs["b"];
 
-                MathIO::new(a + b)
+                a + b
             }
             MathNodes::Mult => {
-                let a: f32 = inputs["a"].value;
-                let b: f32 = inputs["b"].value;
+                let a: f32 = inputs["a"];
+                let b: f32 = inputs["b"];
 
-                MathIO::new(a * b)
+                a * b
             }
-            MathNodes::Output => {
-                let value = inputs["value"].clone();
-
-                value
-            }
-            MathNodes::Value(value) => value.clone(),
+            MathNodes::Output => inputs["value"],
+            MathNodes::Value(value) => value.value,
         }
     }
 
@@ -194,15 +126,15 @@ impl SlotWidget<Self, DisplayWidget> for MathNodes {
     }
 }
 
-impl SlotWidget<Self, InputWidget<Self>> for MathNodes {
-    fn get_widget(&self) -> Option<InputWidget<Self>> {
+impl SlotWidget<Self, InputWidget<NumberInput>> for MathNodes {
+    fn get_widget(&self) -> Option<InputWidget<NumberInput>> {
         match self {
             MathNodes::Value(_) => Some(InputWidget::default()),
             _ => None,
         }
     }
 
-    fn set_value(&mut self, value: MathIO) {
+    fn set_value(&mut self, value: NumberInput) {
         match self {
             MathNodes::Value(v) => *v = value,
             _ => {}
