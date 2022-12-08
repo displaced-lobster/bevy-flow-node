@@ -1,6 +1,6 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
-use bevy_node_editor::{CursorCamera, NodeInput, NodePlugins, NodeSet, NodeTemplate};
+use bevy_node_editor::{CursorCamera, NodeInput, NodeOutput, NodePlugins, NodeSet, NodeTemplate};
 
 fn main() {
     App::new()
@@ -18,7 +18,11 @@ struct NoOpNodes;
 impl NodeSet for NoOpNodes {
     type NodeIO = ();
 
-    fn resolve(&self, _inputs: &std::collections::HashMap<String, Self::NodeIO>) -> Self::NodeIO {
+    fn resolve(
+        &self,
+        _inputs: &std::collections::HashMap<String, Self::NodeIO>,
+        _output: Option<&str>,
+    ) -> Self::NodeIO {
         ()
     }
 
@@ -33,7 +37,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(NodeTemplate::<NoOpNodes> {
         position: Vec2::new(-200.0, 0.0),
         title: "Node 1".to_string(),
-        output_label: Some("Output".to_string()),
+        outputs: Some(vec![NodeOutput::from_label("Output")]),
         ..default()
     });
 

@@ -1,7 +1,7 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    CursorCamera, NodeInput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget,
+    CursorCamera, NodeInput, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate, SlotWidget,
 };
 use std::{
     collections::HashMap,
@@ -39,7 +39,11 @@ impl Default for IONodes {
 impl NodeSet for IONodes {
     type NodeIO = NodeString;
 
-    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
+    fn resolve(
+        &self,
+        inputs: &HashMap<String, Self::NodeIO>,
+        _output: Option<&str>,
+    ) -> Self::NodeIO {
         match self {
             IONodes::Input(s) => NodeString(s.clone()),
             IONodes::Output => inputs["input"].clone(),
@@ -50,7 +54,7 @@ impl NodeSet for IONodes {
         match self {
             IONodes::Input(_) => NodeTemplate {
                 title: "Input".to_string(),
-                output_label: Some("output".to_string()),
+                outputs: Some(vec![NodeOutput::from_label("output")]),
                 node: self,
                 slot: Some(NodeSlot {
                     height: 20.0,

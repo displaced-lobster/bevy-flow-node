@@ -43,7 +43,7 @@ impl NodeSlot {
 pub struct NodeTemplate<N: NodeSet> {
     pub inputs: Option<Vec<NodeInput<N>>>,
     pub node: N,
-    pub output_label: Option<String>,
+    pub outputs: Option<Vec<NodeOutput>>,
     pub position: Vec2,
     pub slot: Option<NodeSlot>,
     pub title: String,
@@ -56,7 +56,7 @@ impl<N: NodeSet> Default for NodeTemplate<N> {
             inputs: None,
             node: N::default(),
             position: Vec2::ZERO,
-            output_label: None,
+            outputs: None,
             slot: None,
             title: "Node".to_string(),
             width: 200.0,
@@ -74,8 +74,13 @@ fn build_node<N: NodeSet>(
     query: Query<(Entity, &NodeTemplate<N>)>,
 ) {
     for (entity, template) in query.iter() {
-        let n_io = if let Some(inputs) = &template.inputs {
+        let n_inputs = if let Some(inputs) = &template.inputs {
             inputs.len()
+        } else {
+            0
+        };
+        let n_outputs = if let Some(outputs) = &template.outputs {
+            outputs.len()
         } else {
             0
         };
@@ -86,7 +91,7 @@ fn build_node<N: NodeSet>(
         };
 
         let height_io = config.font_size_body + config.padding * 2.0;
-        let height_body = height_io * (n_io + 1) as f32 + slot_height;
+        let height_body = height_io * (n_inputs + n_outputs) as f32 + slot_height;
         let height_title = config.font_size_title + config.padding * 2.0;
         let height = height_body + height_title + 2.0;
         let node_size = Vec2::new(template.width, height);
@@ -143,38 +148,43 @@ fn build_node<N: NodeSet>(
 
                 offset_y -= height_title;
 
-                if let Some(label) = &template.output_label {
-                    parent.spawn((
-                        MaterialMesh2dBundle {
-                            material: resources.material_handle_output.clone(),
-                            mesh: Mesh2dHandle(resources.mesh_handle_io.clone()),
+                if let Some(outputs) = &template.outputs {
+                    for output in outputs {
+                        parent.spawn((
+                            MaterialMesh2dBundle {
+                                material: resources.material_handle_output.clone(),
+                                mesh: Mesh2dHandle(resources.mesh_handle_io.clone()),
+                                transform: Transform::from_xyz(
+                                    node_size.x / 2.0,
+                                    offset_y - config.handle_size_io - config.padding,
+                                    2.0,
+                                ),
+                                ..default()
+                            },
+                            (*output).clone(),
+                            Clickable::Radius(config.handle_size_io),
+                        ));
+
+                        parent.spawn(Text2dBundle {
+                            text: Text::from_section(
+                                output.label.clone(),
+                                resources.text_style_body.clone(),
+                            )
+                            .with_alignment(TextAlignment::TOP_RIGHT),
+                            text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
-                                node_size.x / 2.0,
-                                offset_y - config.handle_size_io - config.padding,
-                                2.0,
+                                node_size.x / 2.0 - config.handle_size_io - config.padding,
+                                offset_y - config.font_size_body + config.handle_size_io * 2.0,
+                                1.0,
                             ),
                             ..default()
-                        },
-                        NodeOutput,
-                        Clickable::Radius(config.handle_size_io),
-                    ));
+                        });
 
-                    parent.spawn(Text2dBundle {
-                        text: Text::from_section(label.clone(), resources.text_style_body.clone())
-                            .with_alignment(TextAlignment::TOP_RIGHT),
-                        text_2d_bounds: Text2dBounds { size: bounds_io },
-                        transform: Transform::from_xyz(
-                            node_size.x / 2.0 - config.handle_size_io - config.padding,
-                            offset_y - config.font_size_body + config.handle_size_io * 2.0,
-                            1.0,
-                        ),
-                        ..default()
-                    });
+                        offset_y -= height_io;
+                    }
                 } else {
                     output = true;
                 }
-
-                offset_y -= height_io;
 
                 if let Some(inputs) = &template.inputs {
                     for input in inputs.iter() {

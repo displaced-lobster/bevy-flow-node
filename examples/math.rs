@@ -1,7 +1,7 @@
 use bevy::{prelude::*, winit::WinitSettings};
 use bevy_node_editor::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, TextInputWidget, TextInputWidgetPlugin},
-    NodeInput, NodeMenu, NodeMenuPlugin, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
+    NodeInput, NodeMenu, NodeMenuPlugin, NodeOutput, NodePlugins, NodeSet, NodeSlot, NodeTemplate,
     PanCameraPlugin, SlotWidget,
 };
 use std::collections::HashMap;
@@ -116,7 +116,11 @@ impl Default for MathNodes {
 impl NodeSet for MathNodes {
     type NodeIO = MathIO;
 
-    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO {
+    fn resolve(
+        &self,
+        inputs: &HashMap<String, Self::NodeIO>,
+        _output: Option<&str>,
+    ) -> Self::NodeIO {
         match self {
             MathNodes::Add => {
                 let a: f32 = inputs["a"].value;
@@ -144,7 +148,7 @@ impl NodeSet for MathNodes {
             Self::Add => NodeTemplate {
                 title: "Add".to_string(),
                 inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                output_label: Some("result".to_string()),
+                outputs: Some(vec![NodeOutput::from_label("result")]),
                 node: self,
                 ..default()
             },
@@ -152,7 +156,7 @@ impl NodeSet for MathNodes {
                 title: "Multiply".to_string(),
                 inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
                 node: self,
-                output_label: Some("result".to_string()),
+                outputs: Some(vec![NodeOutput::from_label("result")]),
                 ..default()
             },
             Self::Output => NodeTemplate {
@@ -167,7 +171,7 @@ impl NodeSet for MathNodes {
             },
             Self::Value(_) => NodeTemplate {
                 title: "Value".to_string(),
-                output_label: Some("value".to_string()),
+                outputs: Some(vec![NodeOutput::from_label("value")]),
                 node: self,
                 slot: Some(NodeSlot {
                     height: 20.0,

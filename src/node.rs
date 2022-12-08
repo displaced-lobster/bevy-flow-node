@@ -18,7 +18,8 @@ const NODE_SHADER_HANDLE: HandleUntyped =
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Clone + Default + Send + Sync;
 
-    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>) -> Self::NodeIO;
+    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>, output: Option<&str>)
+        -> Self::NodeIO;
     fn template(self) -> NodeTemplate<Self>;
 }
 
@@ -86,13 +87,14 @@ impl<N: NodeSet> Node<N> {
     pub fn resolve(
         &self,
         entity: Entity,
+        output: Option<&str>,
         q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> N::NodeIO {
         let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
-        self.0.resolve(&inputs)
+        self.0.resolve(&inputs, output)
     }
 }
 
@@ -146,9 +148,9 @@ impl<N: NodeSet> NodeInput<N> {
         q_outputs: &Query<(&Parent, &NodeOutput)>,
     ) -> N::NodeIO {
         if let Some(connection) = self.connection {
-            if let Ok((parent, _output)) = q_outputs.get(connection) {
+            if let Ok((parent, output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
-                    return node.resolve(entity, q_nodes, q_inputs, q_outputs);
+                    return node.resolve(entity, Some(&output.label), q_nodes, q_inputs, q_outputs);
                 }
             }
         }
@@ -157,8 +159,18 @@ impl<N: NodeSet> NodeInput<N> {
     }
 }
 
-#[derive(Component)]
-pub struct NodeOutput;
+#[derive(Clone, Component)]
+pub struct NodeOutput {
+    pub label: String,
+}
+
+impl NodeOutput {
+    pub fn from_label(label: &str) -> Self {
+        Self {
+            label: label.to_string(),
+        }
+    }
+}
 
 pub enum NodeEvent<N: NodeSet> {
     Destroyed,
@@ -346,7 +358,7 @@ fn resolve_output_nodes<N: NodeSet>(
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
             ev_resolution.send(NodeEvent::Resolved(
-                node.resolve(entity, &q_nodes, &q_inputs, &q_outputs),
+                node.resolve(entity, None, &q_nodes, &q_inputs, &q_outputs),
             ));
         }
     }
