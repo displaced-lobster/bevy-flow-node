@@ -31,6 +31,7 @@ pub trait Widget: Clone + Component {
     fn get_value(&self) -> Option<Self::WidgetValue> {
         None
     }
+    fn set_parent(&mut self, _parent: Entity) {}
     fn set_value(&mut self, _value: Self::WidgetValue) {}
 }
 
@@ -124,7 +125,8 @@ fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget>(
 ) {
     for (entity, parent) in q_slot.iter() {
         if let Ok(node) = q_node.get(parent.get()) {
-            if let Some(widget) = node.0.get_widget() {
+            if let Some(mut widget) = node.0.get_widget() {
+                widget.set_parent(parent.get());
                 commands.entity(entity).insert(widget);
             }
         }

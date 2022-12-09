@@ -177,7 +177,7 @@ impl NodeOutput {
 
 pub enum NodeEvent<N: NodeSet> {
     Destroyed,
-    Resolved(N::NodeIO),
+    Resolved((Entity, N::NodeIO)),
 }
 
 #[derive(AsBindGroup, TypeUuid, Debug, Clone, Default)]
@@ -360,9 +360,10 @@ fn resolve_output_nodes<N: NodeSet>(
 ) {
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
-            ev_resolution.send(NodeEvent::Resolved(
+            ev_resolution.send(NodeEvent::Resolved((
+                entity,
                 node.resolve(entity, None, &q_nodes, &q_inputs, &q_outputs),
-            ));
+            )));
         }
     }
 }

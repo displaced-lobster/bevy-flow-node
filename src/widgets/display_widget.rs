@@ -25,6 +25,7 @@ where
 
 #[derive(Component, Clone, Copy, Default)]
 pub struct DisplayWidget {
+    pub parent: Option<Entity>,
     pub size: Vec2,
 }
 
@@ -57,6 +58,10 @@ impl Widget for DisplayWidget {
         ));
     }
 
+    fn set_parent(&mut self, parent: Entity) {
+        self.parent = Some(parent);
+    }
+
     fn size(&self) -> Vec2 {
         self.size
     }
@@ -64,14 +69,16 @@ impl Widget for DisplayWidget {
 
 fn update_display_widget<N: NodeSet>(
     mut ev_node: EventReader<NodeEvent<N>>,
-    mut q_text: Query<&mut Text, With<DisplayWidget>>,
+    mut q_text: Query<(&DisplayWidget, &mut Text)>,
 ) where
     N::NodeIO: Display,
 {
     for ev in ev_node.iter() {
-        if let NodeEvent::Resolved(value) = ev {
-            for mut text in q_text.iter_mut() {
-                text.sections[0].value = value.to_string();
+        if let NodeEvent::Resolved((entity, value)) = ev {
+            for (widget, mut text) in q_text.iter_mut() {
+                if widget.parent == Some(*entity) {
+                    text.sections[0].value = value.to_string();
+                }
             }
         }
     }
