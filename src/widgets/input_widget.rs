@@ -28,7 +28,7 @@ impl InputWidgetValue for String {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, PartialEq)]
 pub struct NumberInput {
     pub value: f32,
     pub s_value: String,
