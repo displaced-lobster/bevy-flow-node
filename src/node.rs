@@ -21,8 +21,11 @@ const NODE_SHADER_HANDLE: HandleUntyped =
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Send + Sync;
 
-    fn resolve(&self, inputs: HashMap<String, Option<Self::NodeIO>>, output: Option<&str>)
-        -> Self::NodeIO;
+    fn resolve(
+        &self,
+        inputs: HashMap<String, Option<Self::NodeIO>>,
+        output: Option<&str>,
+    ) -> Self::NodeIO;
     fn template(self) -> NodeTemplate<Self>;
 }
 
@@ -152,7 +155,13 @@ impl<N: NodeSet> NodeInput<N> {
         if let Some(connection) = self.connection {
             if let Ok((parent, output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
-                    return Some(node.resolve(entity, Some(&output.label), q_nodes, q_inputs, q_outputs));
+                    return Some(node.resolve(
+                        entity,
+                        Some(&output.label),
+                        q_nodes,
+                        q_inputs,
+                        q_outputs,
+                    ));
                 }
             }
         }
