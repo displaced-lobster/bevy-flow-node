@@ -42,20 +42,23 @@ impl NodeSet for LogicNodes {
 
     fn resolve(
         &self,
-        inputs: &std::collections::HashMap<String, Self::NodeIO>,
+        inputs: std::collections::HashMap<String, Option<Self::NodeIO>>,
         output: Option<&str>,
     ) -> Self::NodeIO {
+        let a = inputs["a"].unwrap_or(false);
+        let b = inputs.get("b").unwrap_or(&None).unwrap_or(false);
+
         match self {
             LogicNodes::Input => output.unwrap() == "true",
-            LogicNodes::And => inputs["a"] && inputs["b"],
-            LogicNodes::Or => inputs["a"] || inputs["b"],
-            LogicNodes::Not => !inputs["a"],
-            LogicNodes::Xor => inputs["a"] ^ inputs["b"],
-            LogicNodes::Nand => !(inputs["a"] && inputs["b"]),
-            LogicNodes::Nor => !(inputs["a"] || inputs["b"]),
-            LogicNodes::Xnor => !(inputs["a"] ^ inputs["b"]),
+            LogicNodes::And => a && b,
+            LogicNodes::Or => a || b,
+            LogicNodes::Not => !a,
+            LogicNodes::Xor => a ^ b,
+            LogicNodes::Nand => !(a && b),
+            LogicNodes::Nor => !(a || b),
+            LogicNodes::Xnor => !(a ^ b),
             LogicNodes::Result => {
-                let r = inputs["a"];
+                let r = a;
 
                 println!("{}", r);
 

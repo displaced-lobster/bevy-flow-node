@@ -20,7 +20,7 @@ impl NodeSet for NoOpNodes {
 
     fn resolve(
         &self,
-        _inputs: &std::collections::HashMap<String, Self::NodeIO>,
+        _inputs: std::collections::HashMap<String, Option<Self::NodeIO>>,
         _output: Option<&str>,
     ) -> Self::NodeIO {
         ()

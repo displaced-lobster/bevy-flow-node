@@ -19,9 +19,9 @@ const NODE_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
 
 pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
-    type NodeIO: Clone + Default + Send + Sync;
+    type NodeIO: Send + Sync;
 
-    fn resolve(&self, inputs: &HashMap<String, Self::NodeIO>, output: Option<&str>)
+    fn resolve(&self, inputs: HashMap<String, Option<Self::NodeIO>>, output: Option<&str>)
         -> Self::NodeIO;
     fn template(self) -> NodeTemplate<Self>;
 }
@@ -72,7 +72,7 @@ impl<N: NodeSet> Node<N> {
         q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> HashMap<String, N::NodeIO> {
+    ) -> HashMap<String, Option<N::NodeIO>> {
         let mut inputs = HashMap::new();
 
         for (parent, input) in q_inputs.iter() {
@@ -97,7 +97,7 @@ impl<N: NodeSet> Node<N> {
     ) -> N::NodeIO {
         let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
-        self.0.resolve(&inputs, output)
+        self.0.resolve(inputs, output)
     }
 }
 
@@ -131,7 +131,6 @@ impl Default for NodeConfig {
 #[derive(Clone, Component, Default)]
 pub struct NodeInput<N: NodeSet> {
     pub connection: Option<Entity>,
-    pub default: N::NodeIO,
     pub label: String,
     _phantom: PhantomData<N>,
 }
@@ -149,16 +148,16 @@ impl<N: NodeSet> NodeInput<N> {
         q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
         q_inputs: &Query<(&Parent, &NodeInput<N>)>,
         q_outputs: &Query<(&Parent, &NodeOutput)>,
-    ) -> N::NodeIO {
+    ) -> Option<N::NodeIO> {
         if let Some(connection) = self.connection {
             if let Ok((parent, output)) = q_outputs.get(connection) {
                 if let Ok((entity, node)) = q_nodes.get(parent.get()) {
-                    return node.resolve(entity, Some(&output.label), q_nodes, q_inputs, q_outputs);
+                    return Some(node.resolve(entity, Some(&output.label), q_nodes, q_inputs, q_outputs));
                 }
             }
         }
 
-        self.default.clone()
+        None
     }
 }
 

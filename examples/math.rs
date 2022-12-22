@@ -64,23 +64,16 @@ impl NodeSet for MathNodes {
 
     fn resolve(
         &self,
-        inputs: &HashMap<String, Self::NodeIO>,
+        inputs: HashMap<String, Option<Self::NodeIO>>,
         _output: Option<&str>,
     ) -> Self::NodeIO {
+        let a = inputs.get("a").unwrap_or(&None).unwrap_or(0.0);
+        let b = inputs.get("b").unwrap_or(&None).unwrap_or(0.0);
+
         match self {
-            MathNodes::Add => {
-                let a: f32 = inputs["a"];
-                let b: f32 = inputs["b"];
-
-                a + b
-            }
-            MathNodes::Mult => {
-                let a: f32 = inputs["a"];
-                let b: f32 = inputs["b"];
-
-                a * b
-            }
-            MathNodes::Output => inputs["value"],
+            MathNodes::Add => a + b,
+            MathNodes::Mult => a * b,
+            MathNodes::Output => inputs["value"].unwrap_or(0.0),
             MathNodes::Value(value) => value.value,
         }
     }

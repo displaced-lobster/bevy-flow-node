@@ -41,12 +41,14 @@ impl NodeSet for IONodes {
 
     fn resolve(
         &self,
-        inputs: &HashMap<String, Self::NodeIO>,
+        inputs: HashMap<String, Option<Self::NodeIO>>,
         _output: Option<&str>,
     ) -> Self::NodeIO {
+        let mut inputs = inputs;
+
         match self {
             IONodes::Input(s) => s.clone(),
-            IONodes::Output => inputs["input"].clone(),
+            IONodes::Output => inputs.remove("input").unwrap().unwrap_or("".to_string()),
         }
     }
 
