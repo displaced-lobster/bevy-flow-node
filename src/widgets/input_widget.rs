@@ -158,24 +158,8 @@ impl<V: InputWidgetValue + 'static + Clone + Send + Sync> Widget for InputWidget
         true
     }
 
-    fn clean(&mut self) {
-        self.dirty = false;
-    }
-
-    fn dirty(&self) -> bool {
-        self.dirty
-    }
-
     fn focus(&mut self) {
         self.active = true;
-    }
-
-    fn get_value(&self) -> Option<V> {
-        Some(self.value.clone())
-    }
-
-    fn set_value(&mut self, value: V) {
-        self.value = value;
     }
 
     fn size(&self) -> Vec2 {
@@ -213,17 +197,17 @@ fn input_widget_value<N: NodeSet, V: InputWidgetValue + 'static + Clone + Send +
     N: SlotWidget<N, InputWidget<V>>,
 {
     for (parent, mut widget) in q_widget.iter_mut() {
-        if widget.dirty() {
-            widget.clean();
+        if widget.dirty {
+            widget.dirty = false;
 
             if let Some(entity) = widget.text_entity {
                 if let Ok(mut text) = q_text.get_mut(entity) {
-                    text.sections[0].value = widget.get_value().unwrap().to_string();
+                    text.sections[0].value = widget.value.clone().to_string();
                 }
             }
 
             if let Ok(mut node) = q_node.get_mut(parent.get()) {
-                (*node).set_value(widget.get_value().unwrap());
+                (*node).set_value(widget.value.clone());
                 ev_conn.send(ConnectionEvent::Propagate);
             }
         }

@@ -22,17 +22,9 @@ pub trait Widget: Clone + Component {
     fn can_click(&self) -> bool {
         false
     }
-    fn clean(&mut self) {}
-    fn dirty(&self) -> bool {
-        false
-    }
     fn focus(&mut self) {}
     fn size(&self) -> Vec2;
-    fn get_value(&self) -> Option<Self::WidgetValue> {
-        None
-    }
     fn set_parent(&mut self, _parent: Entity) {}
-    fn set_value(&mut self, _value: Self::WidgetValue) {}
 }
 
 pub trait SlotWidget<N: NodeSet, W: Widget> {
