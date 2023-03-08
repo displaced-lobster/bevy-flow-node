@@ -154,11 +154,8 @@ fn select_menu_option<N: NodeSet>(
     q_options: Query<(&MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
     for (option, interaction) in q_options.iter() {
-        match interaction {
-            Interaction::Clicked => {
-                events.send(MenuEvent::Selected(option.node.clone()));
-            }
-            _ => {}
+        if interaction == &Interaction::Clicked {
+            events.send(MenuEvent::Selected(option.node.clone()));
         }
     }
 }
@@ -190,7 +187,7 @@ fn build_from_menu_select<M: NodeMenu<N>, N: NodeSet>(
     for event in events.iter() {
         match event {
             MenuEvent::Selected(node) => {
-                menu.build(&mut commands, &node);
+                menu.build(&mut commands, node);
             }
         }
     }

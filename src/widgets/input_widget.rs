@@ -49,9 +49,9 @@ impl From<f32> for NumberInput {
     }
 }
 
-impl Into<String> for NumberInput {
-    fn into(self) -> String {
-        self.s_value.clone()
+impl From<NumberInput> for String {
+    fn from(n: NumberInput) -> Self {
+        n.s_value
     }
 }
 
@@ -67,7 +67,7 @@ impl InputWidgetValue for NumberInput {
     }
 
     fn push(&mut self, c: char) {
-        if c.is_digit(10) {
+        if c.is_ascii_digit() {
             self.s_value.push(c);
 
             if let Ok(value) = self.s_value.parse::<f32>() {
