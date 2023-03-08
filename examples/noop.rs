@@ -23,7 +23,6 @@ impl NodeSet for NoOpNodes {
         _inputs: std::collections::HashMap<String, Option<Self::NodeIO>>,
         _output: Option<&str>,
     ) -> Self::NodeIO {
-        ()
     }
 
     fn template(self) -> NodeTemplate<Self> {

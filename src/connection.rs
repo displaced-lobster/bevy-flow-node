@@ -1,6 +1,6 @@
 #![allow(clippy::type_complexity)]
 
-use bevy::{prelude::*, transform::TransformSystem};
+use bevy::prelude::*;
 use bevy_prototype_lyon::{entity::ShapeBundle, prelude::*};
 use std::marker::PhantomData;
 
@@ -19,10 +19,7 @@ impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
             .add_event::<ConnectionEvent>()
             .add_plugin(ShapePlugin)
             .add_system(break_connection::<N>)
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                draw_connections::<N>.after(TransformSystem::TransformPropagate),
-            )
+            .add_system(draw_connections::<N>)
             .add_system(draw_partial_connections::<N>)
             .add_system(complete_partial_connection::<N>)
             .add_system(convert_partial_connection::<N>)
@@ -79,13 +76,8 @@ fn break_connection<N: NodeSet>(
                             input: None,
                             output: node_input.connection,
                         },
-                        ShapeBundle {
-                            mode: DrawMode::Stroke(StrokeMode::new(
-                                Color::WHITE,
-                                config.connection_size,
-                            )),
-                            ..default()
-                        },
+                        ShapeBundle::default(),
+                        Stroke::new(Color::WHITE, config.connection_size),
                     ));
 
                     for (connection_entity, parent) in q_connection.iter() {
@@ -174,10 +166,6 @@ fn convert_partial_connection<N: NodeSet>(
                             let child = commands
                                 .spawn((
                                     ShapeBundle {
-                                        mode: DrawMode::Stroke(StrokeMode::new(
-                                            Color::WHITE,
-                                            config.connection_size,
-                                        )),
                                         transform: Transform::from_xyz(
                                             0.0,
                                             0.0,
@@ -185,6 +173,7 @@ fn convert_partial_connection<N: NodeSet>(
                                         ),
                                         ..default()
                                     },
+                                    Stroke::new(Color::WHITE, config.connection_size),
                                     Connection,
                                 ))
                                 .id();
@@ -229,13 +218,8 @@ fn create_partial_connection<N: NodeSet>(
                             input: Some(*entity),
                             output: None,
                         },
-                        ShapeBundle {
-                            mode: DrawMode::Stroke(StrokeMode::new(
-                                Color::WHITE,
-                                config.connection_size,
-                            )),
-                            ..default()
-                        },
+                        ShapeBundle::default(),
+                        Stroke::new(Color::WHITE, config.connection_size),
                     ));
                 }
             } else if q_output.get(*entity).is_ok() {
@@ -244,13 +228,8 @@ fn create_partial_connection<N: NodeSet>(
                         input: None,
                         output: Some(*entity),
                     },
-                    ShapeBundle {
-                        mode: DrawMode::Stroke(StrokeMode::new(
-                            Color::WHITE,
-                            config.connection_size,
-                        )),
-                        ..default()
-                    },
+                    ShapeBundle::default(),
+                    Stroke::new(Color::WHITE, config.connection_size),
                 ));
             }
         }

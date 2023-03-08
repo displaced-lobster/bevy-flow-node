@@ -1,4 +1,8 @@
-use bevy::{prelude::*, render::camera::RenderTarget};
+use bevy::{
+    prelude::*,
+    render::camera::RenderTarget,
+    window::{PrimaryWindow, WindowRef},
+};
 
 #[derive(Component)]
 pub struct CursorCamera;
@@ -28,14 +32,15 @@ impl CursorPosition {
 
 fn update_cursor_position(
     mut cursor: ResMut<CursorPosition>,
-    wnds: Res<Windows>,
+    q_primary: Query<&Window, With<PrimaryWindow>>,
+    q_windows: Query<&Window>,
     camera: Query<(&Camera, &GlobalTransform), With<CursorCamera>>,
 ) {
     let (camera, camera_transform) = camera.single();
-    let wnd = if let RenderTarget::Window(id) = camera.target {
-        wnds.get(id).unwrap()
+    let wnd = if let RenderTarget::Window(WindowRef::Entity(id)) = camera.target {
+        q_windows.get(id).unwrap()
     } else {
-        wnds.get_primary().unwrap()
+        q_primary.get_single().unwrap()
     };
 
     if let Some(screen_pos) = wnd.cursor_position() {

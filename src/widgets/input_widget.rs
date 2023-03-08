@@ -1,4 +1,4 @@
-use bevy::{prelude::*, text::Text2dBounds};
+use bevy::{prelude::*, sprite::Anchor, text::Text2dBounds};
 use std::{fmt::Display, marker::PhantomData};
 
 use crate::{
@@ -137,6 +137,7 @@ impl<V: InputWidgetValue + 'static + Clone + Send + Sync> Widget for InputWidget
                 let text_entity = parent
                     .spawn(Text2dBundle {
                         text: Text::from_section("", text_style_title),
+                        text_anchor: Anchor::TopRight,
                         text_2d_bounds: Text2dBounds { size: self.size },
                         transform: Transform::from_xyz(-self.size.x / 2.0, self.size.y / 2.0, 2.0),
                         ..default()

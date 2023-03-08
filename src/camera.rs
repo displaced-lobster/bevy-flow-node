@@ -1,4 +1,9 @@
-use bevy::{input::mouse::MouseWheel, prelude::*};
+use bevy::{
+    input::mouse::MouseWheel,
+    prelude::*,
+    render::camera::ScalingMode,
+    window::PrimaryWindow,
+};
 
 use crate::cursor::CursorCamera;
 
@@ -21,11 +26,11 @@ fn setup(mut commands: Commands) {
 
 fn move_camera(
     mouse: Res<Input<MouseButton>>,
-    windows: Res<Windows>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
     mut query: Query<(&mut Transform, &OrthographicProjection), With<PanCamera>>,
     mut previous_pos: Local<Option<Vec2>>,
 ) {
-    let window = windows.get_primary().unwrap();
+    let window = q_window.get_single().unwrap();
     let window_size = Vec2::new(window.width(), window.height());
     let current_pos = match window.cursor_position() {
         Some(pos) => pos,
@@ -35,14 +40,13 @@ fn move_camera(
 
     if mouse.pressed(MouseButton::Middle) {
         for (mut transform, projection) in query.iter_mut() {
-            let proj_size = Vec2::new(
-                projection.right - projection.left,
-                projection.top - projection.bottom,
-            ) * projection.scale;
-            let world_pos_ratio = proj_size / window_size;
-            let delta_world = delta_pos * world_pos_ratio;
+            if let ScalingMode::Fixed { width, height } = projection.scaling_mode {
+                let proj_size = Vec2::new(width, height) * projection.scale;
+                let world_pos_ratio = proj_size / window_size;
+                let delta_world = delta_pos * world_pos_ratio;
 
-            transform.translation -= delta_world.extend(0.0);
+                transform.translation -= delta_world.extend(0.0);
+            }
         }
     }
 

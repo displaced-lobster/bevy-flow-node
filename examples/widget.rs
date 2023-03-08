@@ -96,9 +96,8 @@ impl SlotWidget<Self, InputWidget<String>> for IONodes {
     }
 
     fn set_value(&mut self, value: String) {
-        match self {
-            IONodes::Input(s) => *s = value,
-            _ => {}
+        if let IONodes::Input(s) = self {
+            *s = value;
         }
     }
 }

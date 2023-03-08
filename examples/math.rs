@@ -136,9 +136,8 @@ impl SlotWidget<Self, InputWidget<NumberInput>> for MathNodes {
     }
 
     fn set_value(&mut self, value: NumberInput) {
-        match self {
-            MathNodes::Value(v) => *v = value,
-            _ => {}
+        if let MathNodes::Value(v) = self {
+            *v = value;
         }
     }
 }

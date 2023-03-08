@@ -1,6 +1,6 @@
 use bevy::{
     prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
+    sprite::{Anchor, MaterialMesh2dBundle, Mesh2dHandle},
     text::Text2dBounds,
 };
 use std::marker::PhantomData;
@@ -148,6 +148,7 @@ fn build_node<N: NodeSet>(
 
                 parent.spawn(Text2dBundle {
                     text: Text::from_section(&template.title, resources.text_style_title.clone()),
+                    text_anchor: Anchor::TopRight,
                     text_2d_bounds: Text2dBounds { size: bounds_title },
                     transform: Transform::from_xyz(offset_x, offset_y, 2.0),
                     ..default()
@@ -177,7 +178,8 @@ fn build_node<N: NodeSet>(
                                 output.label.clone(),
                                 resources.text_style_body.clone(),
                             )
-                            .with_alignment(TextAlignment::TOP_RIGHT),
+                            .with_alignment(TextAlignment::Right),
+                            text_anchor: Anchor::TopLeft,
                             text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
                                 node_size.x / 2.0 - config.handle_size_io - config.padding,
@@ -221,6 +223,7 @@ fn build_node<N: NodeSet>(
                                 input.label.clone(),
                                 resources.text_style_body.clone(),
                             ),
+                            text_anchor: Anchor::TopRight,
                             text_2d_bounds: Text2dBounds { size: bounds_io },
                             transform: Transform::from_xyz(
                                 offset_x + config.padding,

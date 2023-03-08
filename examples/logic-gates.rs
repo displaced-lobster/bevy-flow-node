@@ -45,11 +45,11 @@ impl NodeSet for LogicNodes {
         inputs: std::collections::HashMap<String, Option<Self::NodeIO>>,
         output: Option<&str>,
     ) -> Self::NodeIO {
-        let a = inputs["a"].unwrap_or(false);
+        let a = inputs.get("a").unwrap_or(&None).unwrap_or(false);
         let b = inputs.get("b").unwrap_or(&None).unwrap_or(false);
 
         match self {
-            LogicNodes::Input => output.unwrap() == "true",
+            LogicNodes::Input => output == Some("true"),
             LogicNodes::And => a && b,
             LogicNodes::Or => a || b,
             LogicNodes::Not => !a,

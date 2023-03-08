@@ -1,6 +1,7 @@
 use bevy::{
     prelude::*,
-    text::{Text2dBounds, Text2dSize},
+    sprite::Anchor,
+    text::{Text2dBounds, TextLayoutInfo},
 };
 use std::{fmt::Display, marker::PhantomData};
 
@@ -48,8 +49,9 @@ impl Widget for DisplayWidget {
         self.size = area;
 
         commands.entity(entity).insert((
+            Anchor::TopRight,
             Text::from_section("", text_style_title),
-            Text2dSize::default(),
+            TextLayoutInfo::default(),
             Text2dBounds {
                 size: Vec2::new(area.x / 2.0, area.y),
             },
