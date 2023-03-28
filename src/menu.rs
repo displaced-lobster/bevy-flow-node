@@ -1,12 +1,12 @@
 use bevy::{ecs::system::Resource, prelude::*};
 use std::marker::PhantomData;
 
-use crate::{assets::DefaultAssets, cursor::CursorPosition, node::NodeSet};
+use crate::{assets::DefaultAssets, cursor::CursorPosition, node::FlowNodeSet};
 
 #[derive(Default)]
-pub struct NodeMenuPlugin<M: NodeMenu<N>, N: NodeSet>(PhantomData<(M, N)>);
+pub struct FlowNodeMenuPlugin<M: FlowNodeMenu<N>, N: FlowNodeSet>(PhantomData<(M, N)>);
 
-impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
+impl<M: FlowNodeMenu<N>, N: FlowNodeSet> Plugin for FlowNodeMenuPlugin<M, N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(M::default())
             .insert_resource(MenuConfig::default())
@@ -20,7 +20,7 @@ impl<M: NodeMenu<N>, N: NodeSet> Plugin for NodeMenuPlugin<M, N> {
     }
 }
 
-pub trait NodeMenu<N: NodeSet>: Default + Resource {
+pub trait FlowNodeMenu<N: FlowNodeSet>: Default + Resource {
     fn build(&self, commands: &mut Commands, node: &N) {
         commands.spawn((*node).clone().template());
     }
@@ -51,12 +51,12 @@ impl Default for MenuConfig {
     }
 }
 
-enum MenuEvent<N: NodeSet> {
+enum MenuEvent<N: FlowNodeSet> {
     Selected(N),
 }
 
 #[derive(Component)]
-struct MenuOption<N: NodeSet> {
+struct MenuOption<N: FlowNodeSet> {
     node: N,
 }
 
@@ -91,7 +91,7 @@ fn close_menu(
     }
 }
 
-fn open_menu<M: NodeMenu<N>, N: NodeSet>(
+fn open_menu<M: FlowNodeMenu<N>, N: FlowNodeSet>(
     mut commands: Commands,
     config: Res<MenuConfig>,
     cursor: Res<CursorPosition>,
@@ -149,7 +149,7 @@ fn open_menu<M: NodeMenu<N>, N: NodeSet>(
     }
 }
 
-fn select_menu_option<N: NodeSet>(
+fn select_menu_option<N: FlowNodeSet>(
     mut events: EventWriter<MenuEvent<N>>,
     q_options: Query<(&MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
@@ -160,7 +160,7 @@ fn select_menu_option<N: NodeSet>(
     }
 }
 
-fn hover_menu_option<N: NodeSet>(
+fn hover_menu_option<N: FlowNodeSet>(
     config: Res<MenuConfig>,
     mut q_options: Query<
         (&Interaction, &mut BackgroundColor),
@@ -179,7 +179,7 @@ fn hover_menu_option<N: NodeSet>(
     }
 }
 
-fn build_from_menu_select<M: NodeMenu<N>, N: NodeSet>(
+fn build_from_menu_select<M: FlowNodeMenu<N>, N: FlowNodeSet>(
     mut commands: Commands,
     menu: Res<M>,
     mut events: EventReader<MenuEvent<N>>,

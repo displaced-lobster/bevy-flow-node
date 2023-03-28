@@ -15,23 +15,23 @@ pub mod widgets;
 pub use crate::{
     camera::PanCameraPlugin,
     cursor::CursorCamera,
-    menu::{NodeMenu, NodeMenuPlugin},
-    node::{Node, NodeEvent, NodeInput, NodeOutput, NodeSet},
-    template::{NodeSlot, NodeTemplate},
+    menu::{FlowNodeMenu, FlowNodeMenuPlugin},
+    node::{FlowNode, FlowNodeEvent, FlowNodeInput, FlowNodeOutput, FlowNodeSet},
+    template::{FlowNodeSlot, FlowNodeTemplate},
     widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct NodePlugins<N: NodeSet>(PhantomData<N>);
+pub struct FlowNodePlugins<N: FlowNodeSet>(PhantomData<N>);
 
-impl<N: NodeSet> PluginGroup for NodePlugins<N> {
+impl<N: FlowNodeSet> PluginGroup for FlowNodePlugins<N> {
     fn build(self) -> PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
             .add(assets::DefaultAssetsPlugin)
             .add(connection::ConnectionPlugin::<N>::default())
             .add(cursor::CursorPlugin)
             .add(interactions::InteractionPlugin)
-            .add(node::NodePlugin::<N>::default())
-            .add(template::NodeTemplatePlugin::<N>::default())
+            .add(node::FlowNodePlugin::<N>::default())
+            .add(template::FlowNodeTemplatePlugin::<N>::default())
     }
 }

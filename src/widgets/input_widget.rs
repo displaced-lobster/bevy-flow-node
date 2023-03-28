@@ -4,7 +4,7 @@ use std::{fmt::Display, marker::PhantomData};
 use crate::{
     assets::DefaultAssets,
     connection::ConnectionEvent,
-    node::{Node, NodeSet},
+    node::{FlowNode, FlowNodeSet},
     widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
@@ -84,9 +84,9 @@ impl InputWidgetValue for NumberInput {
 }
 
 #[derive(Default)]
-pub struct InputWidgetPlugin<N: NodeSet, V: InputWidgetValue>(PhantomData<(N, V)>);
+pub struct InputWidgetPlugin<N: FlowNodeSet, V: InputWidgetValue>(PhantomData<(N, V)>);
 
-impl<N: NodeSet, V: InputWidgetValue + 'static + Clone + Default + Send + Sync> Plugin
+impl<N: FlowNodeSet, V: InputWidgetValue + 'static + Clone + Default + Send + Sync> Plugin
     for InputWidgetPlugin<N, V>
 where
     N: SlotWidget<N, InputWidget<V>>,
@@ -189,9 +189,9 @@ fn input_widget_input<V: InputWidgetValue + 'static + Send + Sync>(
     }
 }
 
-fn input_widget_value<N: NodeSet, V: InputWidgetValue + 'static + Clone + Send + Sync>(
+fn input_widget_value<N: FlowNodeSet, V: InputWidgetValue + 'static + Clone + Send + Sync>(
     mut ev_conn: EventWriter<ConnectionEvent>,
-    mut q_node: Query<&mut Node<N>>,
+    mut q_node: Query<&mut FlowNode<N>>,
     mut q_widget: Query<(&Parent, &mut InputWidget<V>)>,
     mut q_text: Query<&mut Text>,
 ) where

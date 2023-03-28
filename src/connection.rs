@@ -7,13 +7,13 @@ use std::marker::PhantomData;
 use crate::{
     cursor::CursorPosition,
     interactions::Clicked,
-    node::{NodeInput, NodeOutput, NodeResources, NodeSet},
+    node::{FlowNodeInput, FlowNodeOutput, FlowNodeResources, FlowNodeSet},
 };
 
 #[derive(Default)]
-pub struct ConnectionPlugin<N: NodeSet>(PhantomData<N>);
+pub struct ConnectionPlugin<N: FlowNodeSet>(PhantomData<N>);
 
-impl<N: NodeSet> Plugin for ConnectionPlugin<N> {
+impl<N: FlowNodeSet> Plugin for ConnectionPlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
@@ -57,14 +57,14 @@ struct PartialConnection {
 #[derive(Component)]
 struct Connection;
 
-fn break_connection<N: NodeSet>(
+fn break_connection<N: FlowNodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
-    node_res: Res<NodeResources>,
+    node_res: Res<FlowNodeResources>,
     mut ev_click: EventReader<Clicked>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connection: Query<(Entity, &Parent), With<Connection>>,
-    mut q_inputs: Query<&mut NodeInput<N>>,
+    mut q_inputs: Query<&mut FlowNodeInput<N>>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     for ev in ev_click.iter() {
@@ -101,14 +101,14 @@ fn break_connection<N: NodeSet>(
     }
 }
 
-fn complete_partial_connection<T: NodeSet>(
+fn complete_partial_connection<T: FlowNodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
     mut q_connections: Query<(Entity, &mut PartialConnection)>,
-    q_input: Query<(Entity, &GlobalTransform), With<NodeInput<T>>>,
-    q_output: Query<(Entity, &GlobalTransform), With<NodeOutput>>,
+    q_input: Query<(Entity, &GlobalTransform), With<FlowNodeInput<T>>>,
+    q_output: Query<(Entity, &GlobalTransform), With<FlowNodeOutput>>,
 ) {
     if mouse_button_input.just_released(MouseButton::Left) {
         for (entity, mut connection) in q_connections.iter_mut() {
@@ -143,14 +143,14 @@ fn complete_partial_connection<T: NodeSet>(
     }
 }
 
-fn convert_partial_connection<N: NodeSet>(
+fn convert_partial_connection<N: FlowNodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
-    node_res: Res<NodeResources>,
+    node_res: Res<FlowNodeResources>,
     mut ev_connection: EventWriter<ConnectionEvent>,
     q_connections: Query<(Entity, &PartialConnection)>,
-    q_outputs: Query<&Parent, With<NodeOutput>>,
-    mut q_inputs: Query<(Entity, &Parent, &GlobalTransform, &mut NodeInput<N>)>,
+    q_outputs: Query<&Parent, With<FlowNodeOutput>>,
+    mut q_inputs: Query<(Entity, &Parent, &GlobalTransform, &mut FlowNodeInput<N>)>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     for (entity, connection) in q_connections.iter() {
@@ -197,13 +197,13 @@ fn convert_partial_connection<N: NodeSet>(
     }
 }
 
-fn create_partial_connection<N: NodeSet>(
+fn create_partial_connection<N: FlowNodeSet>(
     mut commands: Commands,
     config: Res<ConnectionConfig>,
     mut ev_click: EventReader<Clicked>,
     q_connections: Query<&PartialConnection>,
-    q_input: Query<&NodeInput<N>>,
-    q_output: Query<&NodeOutput>,
+    q_input: Query<&FlowNodeInput<N>>,
+    q_output: Query<&FlowNodeOutput>,
 ) {
     if !q_connections.is_empty() {
         return;
@@ -236,11 +236,11 @@ fn create_partial_connection<N: NodeSet>(
     }
 }
 
-fn draw_connections<N: NodeSet>(
+fn draw_connections<N: FlowNodeSet>(
     mut commands: Commands,
     mut q_connection: Query<(Entity, &Parent, &mut Path), With<Connection>>,
-    mut q_input: Query<(&NodeInput<N>, &GlobalTransform)>,
-    q_output: Query<&GlobalTransform, With<NodeOutput>>,
+    mut q_input: Query<(&FlowNodeInput<N>, &GlobalTransform)>,
+    q_output: Query<&GlobalTransform, With<FlowNodeOutput>>,
 ) {
     for (entity, parent, mut path) in q_connection.iter_mut() {
         let mut cleanup = false;
@@ -278,11 +278,11 @@ fn draw_connections<N: NodeSet>(
     }
 }
 
-fn draw_partial_connections<N: NodeSet>(
+fn draw_partial_connections<N: FlowNodeSet>(
     mut commands: Commands,
     cursor: Res<CursorPosition>,
     mut q_connections: Query<(Entity, &PartialConnection, &mut Path)>,
-    q_start: Query<&GlobalTransform, Or<(With<NodeInput<N>>, With<NodeOutput>)>>,
+    q_start: Query<&GlobalTransform, Or<(With<FlowNodeInput<N>>, With<FlowNodeOutput>)>>,
 ) {
     for (entity, connection, mut path) in q_connections.iter_mut() {
         let connection_entity = if connection.input.is_some() {

@@ -1,13 +1,13 @@
 use bevy::{prelude::*, winit::WinitSettings};
 
-use bevy_node_editor::{
-    NodeInput,
-    NodeMenu,
-    NodeMenuPlugin,
-    NodeOutput,
-    NodePlugins,
-    NodeSet,
-    NodeTemplate,
+use bevy_flow_node::{
+    FlowNodeInput,
+    FlowNodeMenu,
+    FlowNodeMenuPlugin,
+    FlowNodeOutput,
+    FlowNodePlugins,
+    FlowNodeSet,
+    FlowNodeTemplate,
     PanCameraPlugin,
 };
 
@@ -16,9 +16,9 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.12, 0.12, 0.12)))
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
-        .add_plugins(NodePlugins::<LogicNodes>::default())
+        .add_plugins(FlowNodePlugins::<LogicNodes>::default())
         .add_plugin(PanCameraPlugin)
-        .add_plugin(NodeMenuPlugin::<LogicMenu, LogicNodes>::default())
+        .add_plugin(FlowNodeMenuPlugin::<LogicMenu, LogicNodes>::default())
         .add_startup_system(setup)
         .run();
 }
@@ -37,7 +37,7 @@ enum LogicNodes {
     Result,
 }
 
-impl NodeSet for LogicNodes {
+impl FlowNodeSet for LogicNodes {
     type NodeIO = bool;
 
     fn resolve(
@@ -67,69 +67,87 @@ impl NodeSet for LogicNodes {
         }
     }
 
-    fn template(self) -> NodeTemplate<Self> {
+    fn template(self) -> FlowNodeTemplate<Self> {
         match self {
-            Self::Input => NodeTemplate {
+            Self::Input => FlowNodeTemplate {
                 title: "Input".to_string(),
                 outputs: Some(vec![
-                    NodeOutput::from_label("true"),
-                    NodeOutput::from_label("false"),
+                    FlowNodeOutput::from_label("true"),
+                    FlowNodeOutput::from_label("false"),
                 ]),
                 node: self,
                 ..default()
             },
-            Self::And => NodeTemplate {
+            Self::And => FlowNodeTemplate {
                 title: "And".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("a & b")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("a & b")]),
                 node: self,
                 ..default()
             },
-            Self::Or => NodeTemplate {
+            Self::Or => FlowNodeTemplate {
                 title: "Or".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("a | b")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("a | b")]),
                 node: self,
                 ..default()
             },
-            Self::Not => NodeTemplate {
+            Self::Not => FlowNodeTemplate {
                 title: "Not".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a")]),
-                outputs: Some(vec![NodeOutput::from_label("!a")]),
+                inputs: Some(vec![FlowNodeInput::from_label("a")]),
+                outputs: Some(vec![FlowNodeOutput::from_label("!a")]),
                 node: self,
                 ..default()
             },
-            Self::Xor => NodeTemplate {
+            Self::Xor => FlowNodeTemplate {
                 title: "Xor".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("a ^ b")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("a ^ b")]),
                 node: self,
                 ..default()
             },
-            Self::Nand => NodeTemplate {
+            Self::Nand => FlowNodeTemplate {
                 title: "Nand".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("!(a & b)")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("!(a & b)")]),
                 node: self,
                 ..default()
             },
-            Self::Nor => NodeTemplate {
+            Self::Nor => FlowNodeTemplate {
                 title: "Nor".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("!(a | b)")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("!(a | b)")]),
                 node: self,
                 ..default()
             },
-            Self::Xnor => NodeTemplate {
+            Self::Xnor => FlowNodeTemplate {
                 title: "Xnor".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("!(a ^ b)")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("!(a ^ b)")]),
                 node: self,
                 ..default()
             },
-            Self::Result => NodeTemplate {
+            Self::Result => FlowNodeTemplate {
                 title: "Result".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a")]),
+                inputs: Some(vec![FlowNodeInput::from_label("a")]),
                 node: self,
                 ..default()
             },
@@ -140,7 +158,7 @@ impl NodeSet for LogicNodes {
 #[derive(Default, Resource)]
 struct LogicMenu;
 
-impl NodeMenu<LogicNodes> for LogicMenu {
+impl FlowNodeMenu<LogicNodes> for LogicMenu {
     fn options(&self) -> Vec<(String, LogicNodes)> {
         vec![
             ("Input".to_string(), LogicNodes::Input),

@@ -9,35 +9,35 @@ use crate::{
     interactions::Clickable,
     node::{
         ActiveNode,
-        Node,
-        NodeConfig,
-        NodeInput,
-        NodeMaterial,
-        NodeOutput,
-        NodeResources,
-        NodeSet,
+        FlowNode,
+        FlowNodeConfig,
+        FlowNodeInput,
+        FlowNodeMaterial,
+        FlowNodeOutput,
+        FlowNodeResources,
+        FlowNodeSet,
         OutputNode,
     },
 };
 
 #[derive(Default)]
-pub struct NodeTemplatePlugin<N: NodeSet> {
+pub struct FlowNodeTemplatePlugin<N: FlowNodeSet> {
     _phantom: PhantomData<N>,
 }
 
-impl<N: NodeSet> Plugin for NodeTemplatePlugin<N> {
+impl<N: FlowNodeSet> Plugin for FlowNodeTemplatePlugin<N> {
     fn build(&self, app: &mut App) {
         app.add_system(build_node::<N>);
     }
 }
 
 #[derive(Component, Clone, Copy, Default)]
-pub struct NodeSlot {
+pub struct FlowNodeSlot {
     pub height: f32,
     pub width: f32,
 }
 
-impl NodeSlot {
+impl FlowNodeSlot {
     pub fn new(height: f32) -> Self {
         Self {
             height,
@@ -47,17 +47,17 @@ impl NodeSlot {
 }
 
 #[derive(Component)]
-pub struct NodeTemplate<N: NodeSet> {
-    pub inputs: Option<Vec<NodeInput<N>>>,
+pub struct FlowNodeTemplate<N: FlowNodeSet> {
+    pub inputs: Option<Vec<FlowNodeInput<N>>>,
     pub node: N,
-    pub outputs: Option<Vec<NodeOutput>>,
+    pub outputs: Option<Vec<FlowNodeOutput>>,
     pub position: Vec2,
-    pub slot: Option<NodeSlot>,
+    pub slot: Option<FlowNodeSlot>,
     pub title: String,
     pub width: f32,
 }
 
-impl<N: NodeSet> Default for NodeTemplate<N> {
+impl<N: FlowNodeSet> Default for FlowNodeTemplate<N> {
     fn default() -> Self {
         Self {
             inputs: None,
@@ -71,14 +71,14 @@ impl<N: NodeSet> Default for NodeTemplate<N> {
     }
 }
 
-fn build_node<N: NodeSet>(
+fn build_node<N: FlowNodeSet>(
     mut commands: Commands,
-    config: Res<NodeConfig>,
-    resources: Res<NodeResources>,
+    config: Res<FlowNodeConfig>,
+    resources: Res<FlowNodeResources>,
     mut active_node: ResMut<ActiveNode>,
-    mut materials: ResMut<Assets<NodeMaterial>>,
+    mut materials: ResMut<Assets<FlowNodeMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    query: Query<(Entity, &NodeTemplate<N>)>,
+    query: Query<(Entity, &FlowNodeTemplate<N>)>,
 ) {
     for (entity, template) in query.iter() {
         let n_inputs = if let Some(inputs) = &template.inputs {
@@ -113,7 +113,7 @@ fn build_node<N: NodeSet>(
             .entity(entity)
             .insert((
                 MaterialMesh2dBundle {
-                    material: materials.add(NodeMaterial {
+                    material: materials.add(FlowNodeMaterial {
                         color: config.color_node,
                         color_border: config.color_border,
                         color_title: config.color_title,
@@ -250,8 +250,8 @@ fn build_node<N: NodeSet>(
                     ));
                 }
             })
-            .insert(Node(template.node.clone()))
-            .remove::<NodeTemplate<N>>();
+            .insert(FlowNode(template.node.clone()))
+            .remove::<FlowNodeTemplate<N>>();
 
         if output {
             commands.entity(entity).insert(OutputNode);

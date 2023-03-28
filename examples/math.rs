@@ -1,14 +1,14 @@
 use bevy::{prelude::*, winit::WinitSettings};
-use bevy_node_editor::{
+use bevy_flow_node::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin, NumberInput},
-    NodeInput,
-    NodeMenu,
-    NodeMenuPlugin,
-    NodeOutput,
-    NodePlugins,
-    NodeSet,
-    NodeSlot,
-    NodeTemplate,
+    FlowNodeInput,
+    FlowNodeMenu,
+    FlowNodeMenuPlugin,
+    FlowNodeOutput,
+    FlowNodePlugins,
+    FlowNodeSet,
+    FlowNodeSlot,
+    FlowNodeTemplate,
     PanCameraPlugin,
     SlotWidget,
 };
@@ -19,9 +19,9 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.12, 0.12, 0.12)))
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
-        .add_plugins(NodePlugins::<MathNodes>::default())
+        .add_plugins(FlowNodePlugins::<MathNodes>::default())
         .add_plugin(PanCameraPlugin)
-        .add_plugin(NodeMenuPlugin::<MathMenu, MathNodes>::default())
+        .add_plugin(FlowNodeMenuPlugin::<MathMenu, MathNodes>::default())
         .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
         .add_plugin(InputWidgetPlugin::<MathNodes, NumberInput>::default())
         .add_startup_system(setup)
@@ -31,7 +31,7 @@ fn main() {
 #[derive(Default, Resource)]
 struct MathMenu;
 
-impl NodeMenu<MathNodes> for MathMenu {
+impl FlowNodeMenu<MathNodes> for MathMenu {
     fn options(&self) -> Vec<(String, MathNodes)> {
         vec![
             (
@@ -59,7 +59,7 @@ impl Default for MathNodes {
     }
 }
 
-impl NodeSet for MathNodes {
+impl FlowNodeSet for MathNodes {
     type NodeIO = f32;
 
     fn resolve(
@@ -78,37 +78,43 @@ impl NodeSet for MathNodes {
         }
     }
 
-    fn template(self) -> NodeTemplate<Self> {
+    fn template(self) -> FlowNodeTemplate<Self> {
         match self {
-            Self::Add => NodeTemplate {
+            Self::Add => FlowNodeTemplate {
                 title: "Add".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
-                outputs: Some(vec![NodeOutput::from_label("result")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
+                outputs: Some(vec![FlowNodeOutput::from_label("result")]),
                 node: self,
                 ..default()
             },
-            Self::Mult => NodeTemplate {
+            Self::Mult => FlowNodeTemplate {
                 title: "Multiply".to_string(),
-                inputs: Some(vec![NodeInput::from_label("a"), NodeInput::from_label("b")]),
+                inputs: Some(vec![
+                    FlowNodeInput::from_label("a"),
+                    FlowNodeInput::from_label("b"),
+                ]),
                 node: self,
-                outputs: Some(vec![NodeOutput::from_label("result")]),
+                outputs: Some(vec![FlowNodeOutput::from_label("result")]),
                 ..default()
             },
-            Self::Output => NodeTemplate {
+            Self::Output => FlowNodeTemplate {
                 title: "Output".to_string(),
-                inputs: Some(vec![NodeInput::from_label("value")]),
+                inputs: Some(vec![FlowNodeInput::from_label("value")]),
                 node: self,
-                slot: Some(NodeSlot {
+                slot: Some(FlowNodeSlot {
                     height: 20.0,
                     ..default()
                 }),
                 ..default()
             },
-            Self::Value(_) => NodeTemplate {
+            Self::Value(_) => FlowNodeTemplate {
                 title: "Value".to_string(),
-                outputs: Some(vec![NodeOutput::from_label("value")]),
+                outputs: Some(vec![FlowNodeOutput::from_label("value")]),
                 node: self,
-                slot: Some(NodeSlot {
+                slot: Some(FlowNodeSlot {
                     height: 20.0,
                     ..default()
                 }),

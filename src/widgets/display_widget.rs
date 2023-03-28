@@ -7,14 +7,14 @@ use std::{fmt::Display, marker::PhantomData};
 
 use crate::{
     assets::DefaultAssets,
-    node::{NodeEvent, NodeSet},
+    node::{FlowNodeEvent, FlowNodeSet},
     widget::{SlotWidget, Widget, WidgetPlugin},
 };
 
 #[derive(Default)]
-pub struct DisplayWidgetPlugin<N: NodeSet + SlotWidget<N, DisplayWidget>>(PhantomData<N>);
+pub struct DisplayWidgetPlugin<N: FlowNodeSet + SlotWidget<N, DisplayWidget>>(PhantomData<N>);
 
-impl<N: NodeSet + SlotWidget<N, DisplayWidget>> Plugin for DisplayWidgetPlugin<N>
+impl<N: FlowNodeSet + SlotWidget<N, DisplayWidget>> Plugin for DisplayWidgetPlugin<N>
 where
     N::NodeIO: Display,
 {
@@ -69,14 +69,14 @@ impl Widget for DisplayWidget {
     }
 }
 
-fn update_display_widget<N: NodeSet>(
-    mut ev_node: EventReader<NodeEvent<N>>,
+fn update_display_widget<N: FlowNodeSet>(
+    mut ev_node: EventReader<FlowNodeEvent<N>>,
     mut q_text: Query<(&DisplayWidget, &mut Text)>,
 ) where
     N::NodeIO: Display,
 {
     for ev in ev_node.iter() {
-        if let NodeEvent::Resolved((entity, value)) = ev {
+        if let FlowNodeEvent::Resolved((entity, value)) = ev {
             for (widget, mut text) in q_text.iter_mut() {
                 if widget.parent == Some(*entity) {
                     text.sections[0].value = value.to_string();

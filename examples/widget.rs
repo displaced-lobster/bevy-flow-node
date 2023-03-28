@@ -1,13 +1,13 @@
 use bevy::{prelude::*, winit::WinitSettings};
-use bevy_node_editor::{
+use bevy_flow_node::{
     widgets::{DisplayWidget, DisplayWidgetPlugin, InputWidget, InputWidgetPlugin},
     CursorCamera,
-    NodeInput,
-    NodeOutput,
-    NodePlugins,
-    NodeSet,
-    NodeSlot,
-    NodeTemplate,
+    FlowNodeInput,
+    FlowNodeOutput,
+    FlowNodePlugins,
+    FlowNodeSet,
+    FlowNodeSlot,
+    FlowNodeTemplate,
     SlotWidget,
 };
 use std::collections::HashMap;
@@ -17,7 +17,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.12, 0.12, 0.12)))
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
-        .add_plugins(NodePlugins::<IONodes>::default())
+        .add_plugins(FlowNodePlugins::<IONodes>::default())
         .add_plugin(DisplayWidgetPlugin::<IONodes>::default())
         .add_plugin(InputWidgetPlugin::<IONodes, String>::default())
         .add_startup_system(setup)
@@ -36,7 +36,7 @@ impl Default for IONodes {
     }
 }
 
-impl NodeSet for IONodes {
+impl FlowNodeSet for IONodes {
     type NodeIO = String;
 
     fn resolve(
@@ -52,23 +52,23 @@ impl NodeSet for IONodes {
         }
     }
 
-    fn template(self) -> NodeTemplate<Self> {
+    fn template(self) -> FlowNodeTemplate<Self> {
         match self {
-            IONodes::Input(_) => NodeTemplate {
+            IONodes::Input(_) => FlowNodeTemplate {
                 title: "Input".to_string(),
-                outputs: Some(vec![NodeOutput::from_label("output")]),
+                outputs: Some(vec![FlowNodeOutput::from_label("output")]),
                 node: self,
-                slot: Some(NodeSlot {
+                slot: Some(FlowNodeSlot {
                     height: 20.0,
                     ..default()
                 }),
                 ..default()
             },
-            IONodes::Output => NodeTemplate {
+            IONodes::Output => FlowNodeTemplate {
                 title: "Output".to_string(),
-                inputs: Some(vec![NodeInput::from_label("input")]),
+                inputs: Some(vec![FlowNodeInput::from_label("input")]),
                 node: self,
-                slot: Some(NodeSlot {
+                slot: Some(FlowNodeSlot {
                     height: 20.0,
                     ..default()
                 }),

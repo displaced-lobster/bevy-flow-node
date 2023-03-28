@@ -1,5 +1,5 @@
 [package]
-name = "bevy-node-editor"
+name = "bevy-flow-node"
 version = "0.1.0"
 edition = "2021"
 

@@ -4,8 +4,8 @@ use std::marker::PhantomData;
 use crate::{
     assets::DefaultAssets,
     interactions::{Clickable, Clicked},
-    node::{Node, NodeSet},
-    template::NodeSlot,
+    node::{FlowNode, FlowNodeSet},
+    template::FlowNodeSlot,
 };
 
 pub trait Widget: Clone + Component {
@@ -27,15 +27,15 @@ pub trait Widget: Clone + Component {
     fn set_parent(&mut self, _parent: Entity) {}
 }
 
-pub trait SlotWidget<N: NodeSet, W: Widget> {
+pub trait SlotWidget<N: FlowNodeSet, W: Widget> {
     fn get_widget(&self) -> Option<W>;
     fn set_value(&mut self, _value: W::WidgetValue) {}
 }
 
 #[derive(Default)]
-pub struct WidgetPlugin<N: NodeSet + SlotWidget<N, W>, W: Widget>(PhantomData<(N, W)>);
+pub struct WidgetPlugin<N: FlowNodeSet + SlotWidget<N, W>, W: Widget>(PhantomData<(N, W)>);
 
-impl<N: NodeSet + SlotWidget<N, W>, W: Widget> Plugin for WidgetPlugin<N, W> {
+impl<N: FlowNodeSet + SlotWidget<N, W>, W: Widget> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveWidget::<N, W>::default())
             .add_system(focus_blur_widget::<N, W>)
@@ -45,12 +45,12 @@ impl<N: NodeSet + SlotWidget<N, W>, W: Widget> Plugin for WidgetPlugin<N, W> {
 }
 
 #[derive(Resource)]
-struct ActiveWidget<N: NodeSet, W: Widget> {
+struct ActiveWidget<N: FlowNodeSet, W: Widget> {
     entity: Option<Entity>,
     _phantom: PhantomData<(N, W)>,
 }
 
-impl<N: NodeSet, W: Widget> Default for ActiveWidget<N, W> {
+impl<N: FlowNodeSet, W: Widget> Default for ActiveWidget<N, W> {
     fn default() -> Self {
         Self {
             entity: None,
@@ -59,7 +59,7 @@ impl<N: NodeSet, W: Widget> Default for ActiveWidget<N, W> {
     }
 }
 
-fn focus_blur_widget<N: NodeSet, W: Widget>(
+fn focus_blur_widget<N: FlowNodeSet, W: Widget>(
     mut active_widget: ResMut<ActiveWidget<N, W>>,
     mut ev_click: EventReader<Clicked>,
     mut query: Query<(Entity, &mut W), With<Clickable>>,
@@ -87,10 +87,10 @@ fn focus_blur_widget<N: NodeSet, W: Widget>(
     }
 }
 
-fn build_widget<N: NodeSet, W: Widget>(
+fn build_widget<N: FlowNodeSet, W: Widget>(
     mut commands: Commands,
     assets: Res<DefaultAssets>,
-    mut q_widget: Query<(Entity, &mut W, &NodeSlot)>,
+    mut q_widget: Query<(Entity, &mut W, &FlowNodeSlot)>,
 ) {
     for (entity, mut widget, slot) in q_widget.iter_mut() {
         widget.build(
@@ -100,7 +100,7 @@ fn build_widget<N: NodeSet, W: Widget>(
             &assets,
         );
 
-        commands.entity(entity).remove::<NodeSlot>();
+        commands.entity(entity).remove::<FlowNodeSlot>();
 
         if widget.can_click() {
             commands
@@ -110,10 +110,10 @@ fn build_widget<N: NodeSet, W: Widget>(
     }
 }
 
-fn slot_widget<N: NodeSet + SlotWidget<N, W>, W: Widget>(
+fn slot_widget<N: FlowNodeSet + SlotWidget<N, W>, W: Widget>(
     mut commands: Commands,
-    q_node: Query<&Node<N>>,
-    q_slot: Query<(Entity, &Parent), (With<NodeSlot>, Without<W>)>,
+    q_node: Query<&FlowNode<N>>,
+    q_slot: Query<(Entity, &Parent), (With<FlowNodeSlot>, Without<W>)>,
 ) {
     for (entity, parent) in q_slot.iter() {
         if let Ok(node) = q_node.get(parent.get()) {

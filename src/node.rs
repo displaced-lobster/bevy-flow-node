@@ -12,13 +12,13 @@ use crate::{
     connection::ConnectionEvent,
     cursor::CursorPosition,
     interactions::Clicked,
-    template::NodeTemplate,
+    template::FlowNodeTemplate,
 };
 
 const NODE_SHADER_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
 
-pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
+pub trait FlowNodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Send + Sync;
 
     fn resolve(
@@ -26,18 +26,18 @@ pub trait NodeSet: 'static + Clone + Default + Sized + Send + Sync {
         inputs: HashMap<String, Option<Self::NodeIO>>,
         output: Option<&str>,
     ) -> Self::NodeIO;
-    fn template(self) -> NodeTemplate<Self>;
+    fn template(self) -> FlowNodeTemplate<Self>;
 }
 
-pub struct NodePlugin<N: NodeSet>(PhantomData<N>);
+pub struct FlowNodePlugin<N: FlowNodeSet>(PhantomData<N>);
 
-impl<N: NodeSet> Default for NodePlugin<N> {
+impl<N: FlowNodeSet> Default for FlowNodePlugin<N> {
     fn default() -> Self {
         Self(PhantomData)
     }
 }
 
-impl<N: NodeSet> Plugin for NodePlugin<N> {
+impl<N: FlowNodeSet> Plugin for FlowNodePlugin<N> {
     fn build(&self, app: &mut App) {
         load_internal_asset!(
             app,
@@ -45,9 +45,9 @@ impl<N: NodeSet> Plugin for NodePlugin<N> {
             "assets/shaders/node.wgsl",
             Shader::from_wgsl
         );
-        app.insert_resource(NodeConfig::default())
-            .add_event::<NodeEvent<N>>()
-            .add_plugin(Material2dPlugin::<NodeMaterial>::default())
+        app.insert_resource(FlowNodeConfig::default())
+            .add_event::<FlowNodeEvent<N>>()
+            .add_plugin(Material2dPlugin::<FlowNodeMaterial>::default())
             .add_startup_system(setup)
             .add_system(activate_node)
             .add_system(delete_node::<N>)
@@ -66,15 +66,15 @@ pub struct ActiveNode {
 }
 
 #[derive(Component, Default, Deref, DerefMut)]
-pub struct Node<N: NodeSet>(pub(crate) N);
+pub struct FlowNode<N: FlowNodeSet>(pub(crate) N);
 
-impl<N: NodeSet> Node<N> {
+impl<N: FlowNodeSet> FlowNode<N> {
     pub fn get_inputs(
         &self,
         entity: Entity,
-        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
-        q_outputs: &Query<(&Parent, &NodeOutput)>,
+        q_nodes: &Query<(Entity, &FlowNode<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &FlowNodeInput<N>)>,
+        q_outputs: &Query<(&Parent, &FlowNodeOutput)>,
     ) -> HashMap<String, Option<N::NodeIO>> {
         let mut inputs = HashMap::new();
 
@@ -94,9 +94,9 @@ impl<N: NodeSet> Node<N> {
         &self,
         entity: Entity,
         output: Option<&str>,
-        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
-        q_outputs: &Query<(&Parent, &NodeOutput)>,
+        q_nodes: &Query<(Entity, &FlowNode<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &FlowNodeInput<N>)>,
+        q_outputs: &Query<(&Parent, &FlowNodeOutput)>,
     ) -> N::NodeIO {
         let inputs = self.get_inputs(entity, q_nodes, q_inputs, q_outputs);
 
@@ -105,7 +105,7 @@ impl<N: NodeSet> Node<N> {
 }
 
 #[derive(Resource)]
-pub struct NodeConfig {
+pub struct FlowNodeConfig {
     pub border_thickness: f32,
     pub color_border: Color,
     pub color_node: Color,
@@ -116,7 +116,7 @@ pub struct NodeConfig {
     pub font_size_title: f32,
 }
 
-impl Default for NodeConfig {
+impl Default for FlowNodeConfig {
     fn default() -> Self {
         Self {
             border_thickness: 2.0,
@@ -132,13 +132,13 @@ impl Default for NodeConfig {
 }
 
 #[derive(Clone, Component, Default)]
-pub struct NodeInput<N: NodeSet> {
+pub struct FlowNodeInput<N: FlowNodeSet> {
     pub connection: Option<Entity>,
     pub label: String,
     _phantom: PhantomData<N>,
 }
 
-impl<N: NodeSet> NodeInput<N> {
+impl<N: FlowNodeSet> FlowNodeInput<N> {
     pub fn from_label(label: &str) -> Self {
         Self {
             label: label.to_string(),
@@ -148,9 +148,9 @@ impl<N: NodeSet> NodeInput<N> {
 
     pub fn get_input(
         &self,
-        q_nodes: &Query<(Entity, &Node<N>), Without<OutputNode>>,
-        q_inputs: &Query<(&Parent, &NodeInput<N>)>,
-        q_outputs: &Query<(&Parent, &NodeOutput)>,
+        q_nodes: &Query<(Entity, &FlowNode<N>), Without<OutputNode>>,
+        q_inputs: &Query<(&Parent, &FlowNodeInput<N>)>,
+        q_outputs: &Query<(&Parent, &FlowNodeOutput)>,
     ) -> Option<N::NodeIO> {
         if let Some(connection) = self.connection {
             if let Ok((parent, output)) = q_outputs.get(connection) {
@@ -171,11 +171,11 @@ impl<N: NodeSet> NodeInput<N> {
 }
 
 #[derive(Clone, Component)]
-pub struct NodeOutput {
+pub struct FlowNodeOutput {
     pub label: String,
 }
 
-impl NodeOutput {
+impl FlowNodeOutput {
     pub fn from_label(label: &str) -> Self {
         Self {
             label: label.to_string(),
@@ -183,14 +183,14 @@ impl NodeOutput {
     }
 }
 
-pub enum NodeEvent<N: NodeSet> {
+pub enum FlowNodeEvent<N: FlowNodeSet> {
     Destroyed,
     Resolved((Entity, N::NodeIO)),
 }
 
 #[derive(AsBindGroup, TypeUuid, Debug, Clone, Default)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
-pub struct NodeMaterial {
+pub struct FlowNodeMaterial {
     #[uniform(0)]
     pub active: u32,
     #[uniform(0)]
@@ -207,14 +207,14 @@ pub struct NodeMaterial {
     pub height_title: f32,
 }
 
-impl Material2d for NodeMaterial {
+impl Material2d for FlowNodeMaterial {
     fn fragment_shader() -> ShaderRef {
         NODE_SHADER_HANDLE.typed().into()
     }
 }
 
 #[derive(Resource)]
-pub(crate) struct NodeResources {
+pub(crate) struct FlowNodeResources {
     pub material_handle_input: Handle<ColorMaterial>,
     pub material_handle_input_inactive: Handle<ColorMaterial>,
     pub material_handle_output: Handle<ColorMaterial>,
@@ -229,7 +229,7 @@ pub struct OutputNode;
 fn setup(
     mut commands: Commands,
     assets: Res<DefaultAssets>,
-    config: Res<NodeConfig>,
+    config: Res<FlowNodeConfig>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
@@ -246,7 +246,7 @@ fn setup(
         color: Color::WHITE,
     };
 
-    commands.insert_resource(NodeResources {
+    commands.insert_resource(FlowNodeResources {
         material_handle_input: materials.add(Color::rgb(0.0, 0.992, 0.933).into()),
         material_handle_input_inactive: materials.add(Color::rgb(0.541, 0.624, 0.62).into()),
         material_handle_output: materials.add(Color::rgb(0.992, 0.475, 0.0).into()),
@@ -259,9 +259,9 @@ fn setup(
 fn activate_node(
     cursor: Res<CursorPosition>,
     mut active_node: ResMut<ActiveNode>,
-    mut materials: ResMut<Assets<NodeMaterial>>,
+    mut materials: ResMut<Assets<FlowNodeMaterial>>,
     mut ev_click: EventReader<Clicked>,
-    mut q_node: Query<(&Handle<NodeMaterial>, &mut Transform, &GlobalTransform)>,
+    mut q_node: Query<(&Handle<FlowNodeMaterial>, &mut Transform, &GlobalTransform)>,
 ) {
     for ev in ev_click.iter() {
         let to_deactivate = active_node.entity;
@@ -300,14 +300,14 @@ fn activate_node(
     }
 }
 
-fn delete_node<N: NodeSet>(
+fn delete_node<N: FlowNodeSet>(
     mut commands: Commands,
     mut active_node: ResMut<ActiveNode>,
     keys: Res<Input<KeyCode>>,
-    node_res: Res<NodeResources>,
-    mut ev_node: EventWriter<NodeEvent<N>>,
-    q_outputs: Query<(Entity, &Parent), With<NodeOutput>>,
-    mut q_inputs: Query<(Entity, &mut NodeInput<N>)>,
+    node_res: Res<FlowNodeResources>,
+    mut ev_node: EventWriter<FlowNodeEvent<N>>,
+    q_outputs: Query<(Entity, &Parent), With<FlowNodeOutput>>,
+    mut q_inputs: Query<(Entity, &mut FlowNodeInput<N>)>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
     if keys.just_pressed(KeyCode::Delete) {
@@ -333,16 +333,16 @@ fn delete_node<N: NodeSet>(
             commands.entity(entity).despawn_recursive();
             active_node.count -= 1;
             active_node.entity = None;
-            ev_node.send(NodeEvent::Destroyed);
+            ev_node.send(FlowNodeEvent::Destroyed);
         }
     }
 }
 
-fn drag_node<N: NodeSet>(
+fn drag_node<N: FlowNodeSet>(
     active_node: Res<ActiveNode>,
     cursor: Res<CursorPosition>,
     mouse_button_input: Res<Input<MouseButton>>,
-    mut query: Query<&mut Transform, With<Node<N>>>,
+    mut query: Query<&mut Transform, With<FlowNode<N>>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left)
         || !mouse_button_input.pressed(MouseButton::Left)
@@ -358,17 +358,17 @@ fn drag_node<N: NodeSet>(
     }
 }
 
-fn resolve_output_nodes<N: NodeSet>(
-    mut ev_resolution: EventWriter<NodeEvent<N>>,
+fn resolve_output_nodes<N: FlowNodeSet>(
+    mut ev_resolution: EventWriter<FlowNodeEvent<N>>,
     mut ev_connection: EventReader<ConnectionEvent>,
-    q_output: Query<(Entity, &Node<N>), With<OutputNode>>,
-    q_nodes: Query<(Entity, &Node<N>), Without<OutputNode>>,
-    q_inputs: Query<(&Parent, &NodeInput<N>)>,
-    q_outputs: Query<(&Parent, &NodeOutput)>,
+    q_output: Query<(Entity, &FlowNode<N>), With<OutputNode>>,
+    q_nodes: Query<(Entity, &FlowNode<N>), Without<OutputNode>>,
+    q_inputs: Query<(&Parent, &FlowNodeInput<N>)>,
+    q_outputs: Query<(&Parent, &FlowNodeOutput)>,
 ) {
     if ev_connection.iter().next().is_some() {
         for (entity, node) in q_output.iter() {
-            ev_resolution.send(NodeEvent::Resolved((
+            ev_resolution.send(FlowNodeEvent::Resolved((
                 entity,
                 node.resolve(entity, None, &q_nodes, &q_inputs, &q_outputs),
             )));
