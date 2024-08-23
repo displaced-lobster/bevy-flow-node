@@ -14,7 +14,7 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(FlowNodePlugins::<TemplateNodes>::default())
-        .add_startup_system(setup)
+        .add_systems(Startup, setup)
         .run();
 }
 

@@ -38,9 +38,14 @@ pub struct WidgetPlugin<N: FlowNodeSet + SlotWidget<N, W>, W: Widget>(PhantomDat
 impl<N: FlowNodeSet + SlotWidget<N, W>, W: Widget> Plugin for WidgetPlugin<N, W> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ActiveWidget::<N, W>::default())
-            .add_system(focus_blur_widget::<N, W>)
-            .add_system(build_widget::<N, W>)
-            .add_system(slot_widget::<N, W>);
+            .add_systems(
+                Update,
+                (
+                    focus_blur_widget::<N, W>,
+                    build_widget::<W>,
+                    slot_widget::<N, W>,
+                ),
+            );
     }
 }
 
@@ -64,7 +69,7 @@ fn focus_blur_widget<N: FlowNodeSet, W: Widget>(
     mut ev_click: EventReader<Clicked>,
     mut query: Query<(Entity, &mut W), With<Clickable>>,
 ) {
-    for ev in ev_click.iter() {
+    for ev in ev_click.read() {
         let mut needs_blur = false;
 
         if let Clicked(Some(entity)) = ev {
@@ -87,7 +92,7 @@ fn focus_blur_widget<N: FlowNodeSet, W: Widget>(
     }
 }
 
-fn build_widget<N: FlowNodeSet, W: Widget>(
+fn build_widget<W: Widget>(
     mut commands: Commands,
     assets: Res<DefaultAssets>,
     mut q_widget: Query<(Entity, &mut W, &FlowNodeSlot)>,

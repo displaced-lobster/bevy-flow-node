@@ -11,9 +11,8 @@ pub struct PanCameraPlugin;
 
 impl Plugin for PanCameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup)
-            .add_system(move_camera)
-            .add_system(zoom_camera);
+        app.add_systems(Startup, setup)
+            .add_systems(Update, (move_camera, zoom_camera));
     }
 }
 
@@ -57,7 +56,7 @@ fn zoom_camera(
     mut ev_scroll: EventReader<MouseWheel>,
     mut query: Query<&mut OrthographicProjection, With<PanCamera>>,
 ) {
-    let scroll = ev_scroll.iter().map(|ev| ev.y).sum::<f32>();
+    let scroll = ev_scroll.read().map(|ev| ev.y).sum::<f32>();
 
     if scroll == 0.0 {
         return;

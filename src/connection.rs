@@ -17,13 +17,18 @@ impl<N: FlowNodeSet> Plugin for ConnectionPlugin<N> {
     fn build(&self, app: &mut App) {
         app.insert_resource(ConnectionConfig::default())
             .add_event::<ConnectionEvent>()
-            .add_plugin(ShapePlugin)
-            .add_system(break_connection::<N>)
-            .add_system(draw_connections::<N>)
-            .add_system(draw_partial_connections::<N>)
-            .add_system(complete_partial_connection::<N>)
-            .add_system(convert_partial_connection::<N>)
-            .add_system(create_partial_connection::<N>.before(break_connection::<N>));
+            .add_plugins(ShapePlugin)
+            .add_systems(
+                Update,
+                (
+                    break_connection::<N>,
+                    draw_connections::<N>,
+                    draw_partial_connections::<N>,
+                    complete_partial_connection::<N>,
+                    convert_partial_connection::<N>,
+                    create_partial_connection::<N>.before(break_connection::<N>),
+                ),
+            );
     }
 }
 
@@ -42,6 +47,7 @@ impl Default for ConnectionConfig {
     }
 }
 
+#[derive(Event)]
 pub enum ConnectionEvent {
     Propagate,
     Created,
@@ -67,7 +73,7 @@ fn break_connection<N: FlowNodeSet>(
     mut q_inputs: Query<&mut FlowNodeInput<N>>,
     mut q_material: Query<(&Parent, &mut Handle<ColorMaterial>)>,
 ) {
-    for ev in ev_click.iter() {
+    for ev in ev_click.read() {
         if let Clicked(Some(entity)) = ev {
             if let Ok(mut node_input) = q_inputs.get_mut(*entity) {
                 if node_input.connection.is_some() {
@@ -166,11 +172,14 @@ fn convert_partial_connection<N: FlowNodeSet>(
                             let child = commands
                                 .spawn((
                                     ShapeBundle {
-                                        transform: Transform::from_xyz(
-                                            0.0,
-                                            0.0,
-                                            -transform.translation().z,
-                                        ),
+                                        spatial: SpatialBundle {
+                                            transform: Transform::from_xyz(
+                                                0.0,
+                                                0.0,
+                                                -transform.translation().z,
+                                            ),
+                                            ..default()
+                                        },
                                         ..default()
                                     },
                                     Stroke::new(Color::WHITE, config.connection_size),
@@ -209,7 +218,7 @@ fn create_partial_connection<N: FlowNodeSet>(
         return;
     }
 
-    for ev in ev_click.iter() {
+    for ev in ev_click.read() {
         if let Clicked(Some(entity)) = ev {
             if let Ok(node_input) = q_input.get(*entity) {
                 if node_input.connection.is_none() {

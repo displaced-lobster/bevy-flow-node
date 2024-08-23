@@ -92,9 +92,11 @@ where
     N: SlotWidget<N, InputWidget<V>>,
 {
     fn build(&self, app: &mut App) {
-        app.add_plugin(WidgetPlugin::<N, InputWidget<V>>::default())
-            .add_system(input_widget_input::<V>)
-            .add_system(input_widget_value::<N, V>);
+        app.add_plugins(WidgetPlugin::<N, InputWidget<V>>::default())
+            .add_systems(
+                Update,
+                (input_widget_input::<V>, input_widget_value::<N, V>),
+            );
     }
 }
 
@@ -137,7 +139,7 @@ impl<V: InputWidgetValue + 'static + Clone + Send + Sync> Widget for InputWidget
                 let text_entity = parent
                     .spawn(Text2dBundle {
                         text: Text::from_section("", text_style_title),
-                        text_anchor: Anchor::TopRight,
+                        text_anchor: Anchor::TopLeft,
                         text_2d_bounds: Text2dBounds { size: self.size },
                         transform: Transform::from_xyz(-self.size.x / 2.0, self.size.y / 2.0, 2.0),
                         ..default()
@@ -174,7 +176,7 @@ fn input_widget_input<V: InputWidgetValue + 'static + Send + Sync>(
 ) {
     const BACKSPACE: char = '\u{0008}';
 
-    for ev in ev_char.iter() {
+    for ev in ev_char.read() {
         for mut widget in query.iter_mut() {
             if widget.active {
                 widget.dirty = true;
@@ -189,13 +191,13 @@ fn input_widget_input<V: InputWidgetValue + 'static + Send + Sync>(
     }
 }
 
-fn input_widget_value<N: FlowNodeSet, V: InputWidgetValue + 'static + Clone + Send + Sync>(
+fn input_widget_value<N, V: InputWidgetValue + 'static + Clone + Send + Sync>(
     mut ev_conn: EventWriter<ConnectionEvent>,
     mut q_node: Query<&mut FlowNode<N>>,
     mut q_widget: Query<(&Parent, &mut InputWidget<V>)>,
     mut q_text: Query<&mut Text>,
 ) where
-    N: SlotWidget<N, InputWidget<V>>,
+    N: FlowNodeSet + SlotWidget<N, InputWidget<V>>,
 {
     for (parent, mut widget) in q_widget.iter_mut() {
         if widget.dirty {

@@ -1,7 +1,7 @@
 use bevy::{
     asset::load_internal_asset,
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{TypePath, TypeUuid},
     render::render_resource::{AsBindGroup, ShaderRef},
     sprite::{Material2d, Material2dPlugin},
 };
@@ -15,8 +15,7 @@ use crate::{
     template::FlowNodeTemplate,
 };
 
-const NODE_SHADER_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 7843551199445678407);
+const NODE_SHADER_HANDLE: Handle<Shader> = Handle::weak_from_u128(7843551199445678407);
 
 pub trait FlowNodeSet: 'static + Clone + Default + Sized + Send + Sync {
     type NodeIO: Send + Sync;
@@ -47,12 +46,17 @@ impl<N: FlowNodeSet> Plugin for FlowNodePlugin<N> {
         );
         app.insert_resource(FlowNodeConfig::default())
             .add_event::<FlowNodeEvent<N>>()
-            .add_plugin(Material2dPlugin::<FlowNodeMaterial>::default())
-            .add_startup_system(setup)
-            .add_system(activate_node)
-            .add_system(delete_node::<N>)
-            .add_system(drag_node::<N>.after(activate_node))
-            .add_system(resolve_output_nodes::<N>);
+            .add_plugins(Material2dPlugin::<FlowNodeMaterial>::default())
+            .add_systems(Startup, setup)
+            .add_systems(
+                Update,
+                (
+                    activate_node,
+                    delete_node::<N>,
+                    drag_node::<N>.after(activate_node),
+                    resolve_output_nodes::<N>,
+                ),
+            );
     }
 }
 
@@ -183,12 +187,13 @@ impl FlowNodeOutput {
     }
 }
 
+#[derive(Event)]
 pub enum FlowNodeEvent<N: FlowNodeSet> {
     Destroyed,
     Resolved((Entity, N::NodeIO)),
 }
 
-#[derive(AsBindGroup, TypeUuid, Debug, Clone, Default)]
+#[derive(AsBindGroup, Asset, TypePath, TypeUuid, Debug, Clone, Default)]
 #[uuid = "f690fdae-d598-45ab-8225-97e2a3f056e0"]
 pub struct FlowNodeMaterial {
     #[uniform(0)]
@@ -209,7 +214,7 @@ pub struct FlowNodeMaterial {
 
 impl Material2d for FlowNodeMaterial {
     fn fragment_shader() -> ShaderRef {
-        NODE_SHADER_HANDLE.typed().into()
+        NODE_SHADER_HANDLE.into()
     }
 }
 
@@ -263,7 +268,7 @@ fn activate_node(
     mut ev_click: EventReader<Clicked>,
     mut q_node: Query<(&Handle<FlowNodeMaterial>, &mut Transform, &GlobalTransform)>,
 ) {
-    for ev in ev_click.iter() {
+    for ev in ev_click.read() {
         let to_deactivate = active_node.entity;
 
         if let Clicked(Some(entity)) = ev {
@@ -281,7 +286,7 @@ fn activate_node(
                 active_node.index += 10.0;
                 active_node.index_reset = true;
 
-                let mut material = materials.get_mut(handle).unwrap();
+                let material = materials.get_mut(handle).unwrap();
 
                 material.active = 1;
             } else {
@@ -293,7 +298,7 @@ fn activate_node(
 
         if let Some(entity) = to_deactivate {
             let (handle, _, _) = q_node.get(entity).unwrap();
-            let mut material = materials.get_mut(handle).unwrap();
+            let material = materials.get_mut(handle).unwrap();
 
             material.active = 0;
         }
@@ -366,7 +371,7 @@ fn resolve_output_nodes<N: FlowNodeSet>(
     q_inputs: Query<(&Parent, &FlowNodeInput<N>)>,
     q_outputs: Query<(&Parent, &FlowNodeOutput)>,
 ) {
-    if ev_connection.iter().next().is_some() {
+    if ev_connection.read().next().is_some() {
         for (entity, node) in q_output.iter() {
             ev_resolution.send(FlowNodeEvent::Resolved((
                 entity,

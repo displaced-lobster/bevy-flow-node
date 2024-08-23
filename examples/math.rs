@@ -20,11 +20,13 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(FlowNodePlugins::<MathNodes>::default())
-        .add_plugin(PanCameraPlugin)
-        .add_plugin(FlowNodeMenuPlugin::<MathMenu, MathNodes>::default())
-        .add_plugin(DisplayWidgetPlugin::<MathNodes>::default())
-        .add_plugin(InputWidgetPlugin::<MathNodes, NumberInput>::default())
-        .add_startup_system(setup)
+        .add_plugins((
+            PanCameraPlugin,
+            FlowNodeMenuPlugin::<MathMenu, MathNodes>::default(),
+            DisplayWidgetPlugin::<MathNodes>::default(),
+            InputWidgetPlugin::<MathNodes, NumberInput>::default(),
+        ))
+        .add_systems(Startup, setup)
         .run();
 }
 

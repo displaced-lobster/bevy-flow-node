@@ -11,12 +11,17 @@ impl<M: FlowNodeMenu<N>, N: FlowNodeSet> Plugin for FlowNodeMenuPlugin<M, N> {
         app.insert_resource(M::default())
             .insert_resource(MenuConfig::default())
             .add_event::<MenuEvent<N>>()
-            .add_startup_system(setup)
-            .add_system(build_from_menu_select::<M, N>)
-            .add_system(close_menu)
-            .add_system(hover_menu_option::<N>)
-            .add_system(open_menu::<M, N>)
-            .add_system(select_menu_option::<N>.before(close_menu));
+            .add_systems(Startup, setup)
+            .add_systems(
+                Update,
+                (
+                    build_from_menu_select::<M, N>,
+                    close_menu,
+                    hover_menu_option::<N>,
+                    open_menu::<M, N>,
+                    select_menu_option::<N>.before(close_menu),
+                ),
+            );
     }
 }
 
@@ -51,6 +56,7 @@ impl Default for MenuConfig {
     }
 }
 
+#[derive(Event)]
 enum MenuEvent<N: FlowNodeSet> {
     Selected(N),
 }
@@ -107,13 +113,11 @@ fn open_menu<M: FlowNodeMenu<N>, N: FlowNodeSet>(
             .spawn(NodeBundle {
                 style: Style {
                     flex_direction: FlexDirection::Column,
-                    size: Size::new(Val::Px(config.width), Val::Px(height)),
                     position_type: PositionType::Absolute,
-                    position: UiRect {
-                        left: Val::Px(cursor.screen_x),
-                        top: Val::Px(cursor.screen_y),
-                        ..default()
-                    },
+                    left: Val::Px(cursor.screen_x),
+                    top: Val::Px(cursor.screen_y),
+                    width: Val::Px(config.width),
+                    height: Val::Px(height),
                     ..default()
                 },
                 ..default()
@@ -123,10 +127,8 @@ fn open_menu<M: FlowNodeMenu<N>, N: FlowNodeSet>(
                     parent
                         .spawn(ButtonBundle {
                             style: Style {
-                                size: Size::new(
-                                    Val::Px(config.width),
-                                    Val::Px(config.option_height),
-                                ),
+                                width: Val::Px(config.width),
+                                height: Val::Px(config.option_height),
                                 padding: UiRect::all(Val::Px(5.0)),
                                 align_items: AlignItems::Center,
                                 ..default()
@@ -154,7 +156,7 @@ fn select_menu_option<N: FlowNodeSet>(
     q_options: Query<(&MenuOption<N>, &Interaction), (Changed<Interaction>, With<Button>)>,
 ) {
     for (option, interaction) in q_options.iter() {
-        if interaction == &Interaction::Clicked {
+        if interaction == &Interaction::Pressed {
             events.send(MenuEvent::Selected(option.node.clone()));
         }
     }
@@ -184,7 +186,7 @@ fn build_from_menu_select<M: FlowNodeMenu<N>, N: FlowNodeSet>(
     menu: Res<M>,
     mut events: EventReader<MenuEvent<N>>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         match event {
             MenuEvent::Selected(node) => {
                 menu.build(&mut commands, node);

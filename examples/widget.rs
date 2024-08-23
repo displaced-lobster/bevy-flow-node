@@ -18,9 +18,11 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(FlowNodePlugins::<IONodes>::default())
-        .add_plugin(DisplayWidgetPlugin::<IONodes>::default())
-        .add_plugin(InputWidgetPlugin::<IONodes, String>::default())
-        .add_startup_system(setup)
+        .add_plugins((
+            DisplayWidgetPlugin::<IONodes>::default(),
+            InputWidgetPlugin::<IONodes, String>::default(),
+        ))
+        .add_systems(Startup, setup)
         .run();
 }
 

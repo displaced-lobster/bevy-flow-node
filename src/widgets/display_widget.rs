@@ -19,8 +19,8 @@ where
     N::NodeIO: Display,
 {
     fn build(&self, app: &mut App) {
-        app.add_plugin(WidgetPlugin::<N, DisplayWidget>::default())
-            .add_system(update_display_widget::<N>);
+        app.add_plugins(WidgetPlugin::<N, DisplayWidget>::default())
+            .add_systems(Update, update_display_widget::<N>);
     }
 }
 
@@ -49,14 +49,13 @@ impl Widget for DisplayWidget {
         self.size = area;
 
         commands.entity(entity).insert((
-            Anchor::TopRight,
+            Anchor::TopLeft,
             Text::from_section("", text_style_title),
             TextLayoutInfo::default(),
             Text2dBounds {
                 size: Vec2::new(area.x / 2.0, area.y),
             },
             Visibility::default(),
-            ComputedVisibility::default(),
         ));
     }
 
@@ -75,7 +74,7 @@ fn update_display_widget<N: FlowNodeSet>(
 ) where
     N::NodeIO: Display,
 {
-    for ev in ev_node.iter() {
+    for ev in ev_node.read() {
         if let FlowNodeEvent::Resolved((entity, value)) = ev {
             for (widget, mut text) in q_text.iter_mut() {
                 if widget.parent == Some(*entity) {

@@ -1,8 +1,4 @@
-use bevy::{
-    prelude::*,
-    render::camera::RenderTarget,
-    window::{PrimaryWindow, WindowRef},
-};
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct CursorCamera;
@@ -12,7 +8,7 @@ pub struct CursorPlugin;
 impl Plugin for CursorPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(CursorPosition::default())
-            .add_system(update_cursor_position);
+            .add_systems(Update, update_cursor_position);
     }
 }
 
@@ -32,26 +28,21 @@ impl CursorPosition {
 
 fn update_cursor_position(
     mut cursor: ResMut<CursorPosition>,
-    q_primary: Query<&Window, With<PrimaryWindow>>,
     q_windows: Query<&Window>,
     camera: Query<(&Camera, &GlobalTransform), With<CursorCamera>>,
 ) {
     let (camera, camera_transform) = camera.single();
-    let wnd = if let RenderTarget::Window(WindowRef::Entity(id)) = camera.target {
-        q_windows.get(id).unwrap()
-    } else {
-        q_primary.get_single().unwrap()
-    };
+    let window = q_windows.single();
 
-    if let Some(screen_pos) = wnd.cursor_position() {
-        let window_size = Vec2::new(wnd.width(), wnd.height());
-        let ndc = (screen_pos / window_size) * 2.0 - Vec2::ONE;
-        let ndc_to_world = camera_transform.compute_matrix() * camera.projection_matrix().inverse();
-        let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
-
-        cursor.x = world_pos.x;
-        cursor.y = world_pos.y;
-        cursor.screen_x = screen_pos.x;
-        cursor.screen_y = window_size.y - screen_pos.y;
+    if let Some(screen_position) = window.cursor_position() {
+        if let Some(world_position) = camera
+            .viewport_to_world(camera_transform, screen_position)
+            .map(|ray| ray.origin.truncate())
+        {
+            cursor.x = world_position.x;
+            cursor.y = world_position.y;
+            cursor.screen_x = screen_position.x;
+            cursor.screen_y = screen_position.y;
+        }
     }
 }

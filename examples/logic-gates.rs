@@ -17,9 +17,11 @@ fn main() {
         .insert_resource(WinitSettings::desktop_app())
         .add_plugins(DefaultPlugins)
         .add_plugins(FlowNodePlugins::<LogicNodes>::default())
-        .add_plugin(PanCameraPlugin)
-        .add_plugin(FlowNodeMenuPlugin::<LogicMenu, LogicNodes>::default())
-        .add_startup_system(setup)
+        .add_plugins((
+            PanCameraPlugin,
+            FlowNodeMenuPlugin::<LogicMenu, LogicNodes>::default(),
+        ))
+        .add_systems(Startup, setup)
         .run();
 }
 

@@ -1,3 +1,5 @@
+#import bevy_pbr::forward_io::VertexOutput
+
 struct NodeMaterial {
     highlight: u32,
     color: vec4<f32>,
@@ -12,10 +14,8 @@ struct NodeMaterial {
 var<uniform> material: NodeMaterial;
 
 @fragment
-fn fragment(
-    #import bevy_pbr::mesh_vertex_output
-) -> @location(0) vec4<f32> {
-    let pos = uv * material.size;
+fn fragment(in: VertexOutput) -> @location(0) vec4<f32> {
+    let pos = in.uv * material.size;
 
     if bool(material.highlight) && (
         pos.x < material.border_thickness

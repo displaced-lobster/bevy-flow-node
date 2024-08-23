@@ -6,7 +6,7 @@ pub struct InteractionPlugin;
 
 impl Plugin for InteractionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<Clicked>().add_system(handle_click);
+        app.add_event::<Clicked>().add_systems(Update, handle_click);
     }
 }
 
@@ -36,16 +36,17 @@ impl Clickable {
     }
 }
 
+#[derive(Event)]
 pub struct Clicked(pub Option<Entity>);
 
 fn handle_click(
-    cursur: Res<CursorPosition>,
+    cursor: Res<CursorPosition>,
     mouse_button: Res<Input<MouseButton>>,
     mut ev_click: EventWriter<Clicked>,
     query: Query<(Entity, &Clickable, &GlobalTransform)>,
 ) {
     if mouse_button.just_pressed(MouseButton::Left) {
-        let click_pos = cursur.position();
+        let click_pos = cursor.position();
         let mut clicked = query
             .iter()
             .filter(|(_, clickable, transform)| {
